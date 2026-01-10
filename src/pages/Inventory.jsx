@@ -601,7 +601,7 @@ export default function Inventory() {
                                 />
                               ) : (
                                 <span className="font-mono font-semibold text-primary-600">
-                                  ${product.price.toFixed(2)}
+                                  ${Number(product.price || 0).toFixed(2)}
                                 </span>
                               )}
                             </td>
