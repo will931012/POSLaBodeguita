@@ -618,7 +618,7 @@ export default function Inventory() {
                                 <span className={`font-mono font-semibold ${
                                   lowStock ? 'text-red-600' : 'text-gray-900'
                                 }`}>
-                                  {product.qty}
+                                  {Number(product.qty || 0)}
                                   {lowStock && <AlertTriangle className="inline w-4 h-4 ml-1" />}
                                 </span>
                               )}

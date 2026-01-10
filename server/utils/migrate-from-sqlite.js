@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Migración SOLO PRODUCTS
- * SQLite → PostgreSQL
- * Versión FINAL (Railway safe + varchar safe)
+ * Importar PRODUCTS desde SQLite a PostgreSQL
+ * ❌ NO inserta duplicados por UPC
+ * ✅ Seguro para múltiples imports
  */
 
 require('dotenv').config()
@@ -38,7 +38,7 @@ if (!process.env.DATABASE_URL) {
 // MIGRATION
 // ===============================
 async function migrateProducts() {
-  console.log('\n🚀 Migrating PRODUCTS only (safe mode)...\n')
+  console.log('\n🚀 Importing PRODUCTS (no duplicate UPCs)...\n')
 
   const sqlite = new Database(SQLITE_DB_PATH, {
     readonly: true,
@@ -49,7 +49,7 @@ async function migrateProducts() {
     .prepare('SELECT id, upc, name, price, qty FROM products')
     .all()
 
-  console.log(`📦 Products found: ${products.length}`)
+  console.log(`📦 Products found in SQLite: ${products.length}`)
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
@@ -62,6 +62,8 @@ async function migrateProducts() {
   await client.connect()
   console.log('✅ Connected to PostgreSQL')
 
+  let inserted = 0
+
   try {
     for (let i = 0; i < products.length; i += BATCH_SIZE) {
       const batch = products.slice(i, i + BATCH_SIZE)
@@ -69,56 +71,45 @@ async function migrateProducts() {
       await client.query('BEGIN')
 
       const values = []
-      const placeholders = batch.map((p, idx) => {
-        const base = idx * 5
+      const placeholders = batch
+        .filter(p => p.upc) // ⚠️ solo productos con UPC
+        .map((p, idx) => {
+          const base = idx * 4
 
-        const safeName =
-          typeof p.name === 'string'
-            ? p.name.slice(0, MAX_NAME_LENGTH)
-            : ''
+          values.push(
+            p.upc,
+            (p.name || '').slice(0, MAX_NAME_LENGTH),
+            Number(p.price) || 0,
+            Number(p.qty) || 0
+          )
 
-        values.push(
-          p.id,
-          p.upc,
-          safeName,
-          Number(p.price) || 0,
-          Number(p.qty) || 0
-        )
+          return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`
+        })
 
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`
-      })
+      if (placeholders.length === 0) {
+        await client.query('ROLLBACK')
+        continue
+      }
 
       const sql = `
-        INSERT INTO products (id, upc, name, price, qty)
+        INSERT INTO products (upc, name, price, qty)
         VALUES ${placeholders.join(',')}
-        ON CONFLICT (id) DO UPDATE SET
-          upc = EXCLUDED.upc,
-          name = EXCLUDED.name,
-          price = EXCLUDED.price,
-          qty = EXCLUDED.qty
+        ON CONFLICT (upc) DO NOTHING
       `
 
-      await client.query(sql, values)
+      const res = await client.query(sql, values)
       await client.query('COMMIT')
 
-      console.log(
-        `✅ Inserted ${Math.min(i + BATCH_SIZE, products.length)} / ${products.length}`
-      )
+      inserted += res.rowCount
+
+      console.log(`✅ Inserted ${inserted} new products`)
     }
 
-    await client.query(`
-      SELECT setval(
-        'products_id_seq',
-        (SELECT MAX(id) FROM products)
-      )
-    `)
-
-    console.log('\n🎉 PRODUCTS migration completed successfully!')
+    console.log('\n🎉 Import completed successfully!')
+    console.log(`🧾 Total new products inserted: ${inserted}`)
   } catch (err) {
-    console.error('\n❌ Migration failed:', err)
-    try {
-      await client.query('ROLLBACK')
-    } catch {}
+    console.error('\n❌ Import failed:', err)
+    try { await client.query('ROLLBACK') } catch {}
     process.exit(1)
   } finally {
     await client.end()
