@@ -1,88 +1,55 @@
-const { Pool } = require("pg");
+const { Pool } = require('pg')
 
-// =====================
-// PostgreSQL Pool Setup
-// =====================
+// Railway provides DATABASE_URL automatically
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-
-  // Railway & managed PostgreSQL always require SSL
-  ssl: process.env.DATABASE_URL
-    ? { rejectUnauthorized: false }
+  ssl: process.env.NODE_ENV === 'production' 
+    ? { rejectUnauthorized: false } 
     : false,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+})
 
-  max: 20,                     // Max pool size
-  idleTimeoutMillis: 30000,    // Close idle clients after 30s
-  connectionTimeoutMillis: 5000, // Safer for Railway cold starts
-});
+pool.on('connect', () => {
+  console.log('✅ Connected to PostgreSQL')
+})
 
-// =====================
-// Pool Event Listeners
-// =====================
-pool.on("connect", () => {
-  if (process.env.ENABLE_LOGGING === "true") {
-    console.log("✅ PostgreSQL client connected");
-  }
-});
+pool.on('error', (err) => {
+  console.error('❌ PostgreSQL error:', err)
+})
 
-pool.on("error", (err) => {
-  console.error("❌ Unexpected PostgreSQL error:", err);
-});
-
-// =====================
-// Query Helper
-// =====================
 async function query(text, params) {
-  const start = Date.now();
+  const start = Date.now()
   try {
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
-
-    if (process.env.ENABLE_LOGGING === "true") {
-      console.log("🗄️ Query executed", {
-        duration: `${duration}ms`,
-        rows: res.rowCount,
-      });
+    const res = await pool.query(text, params)
+    const duration = Date.now() - start
+    
+    if (process.env.ENABLE_LOGGING === 'true') {
+      console.log('Query:', { text: text.substring(0, 100), duration, rows: res.rowCount })
     }
-
-    return res;
+    
+    return res
   } catch (error) {
-    console.error("❌ Query error:", {
-      text,
-      message: error.message,
-    });
-    throw error;
+    console.error('Query error:', error.message)
+    throw error
   }
 }
 
-// =====================
-// Transaction Helper
-// =====================
 async function transaction(callback) {
-  const client = await pool.connect();
+  const client = await pool.connect()
+  
   try {
-    await client.query("BEGIN");
-    const result = await callback(client);
-    await client.query("COMMIT");
-    return result;
+    await client.query('BEGIN')
+    const result = await callback(client)
+    await client.query('COMMIT')
+    return result
   } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
+    await client.query('ROLLBACK')
+    throw error
   } finally {
-    client.release();
+    client.release()
   }
 }
 
-// =====================
-// Raw Client Helper
-// =====================
-async function getClient() {
-  return await pool.connect();
-}
-
-module.exports = {
-  query,
-  transaction,
-  getClient,
-  pool,
-};
+module.exports = { query, transaction, pool }

@@ -6,27 +6,19 @@ const { query, transaction } = require('../config/database')
 const upload = multer({ storage: multer.memoryStorage() })
 const router = express.Router()
 
-// POST /api/import/products - Import products from CSV/Excel
 router.post('/products', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' })
-  }
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
 
   try {
     const wb = XLSX.read(req.file.buffer, { type: 'buffer' })
     const ws = wb.Sheets[wb.SheetNames[0]]
     let rows = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false })
-
-    if (rows.length === 0) {
-      return res.status(400).json({ error: 'Empty file' })
-    }
+    if (rows.length === 0) return res.status(400).json({ error: 'Empty file' })
 
     const dryRun = req.query.dryRun === '1'
 
     const result = await transaction(async (client) => {
-      let inserted = 0
-      let updated = 0
-      let skipped = 0
+      let inserted = 0, updated = 0, skipped = 0
 
       for (const row of rows) {
         const upc = String(row.upc || row.UPC || '').trim()
@@ -40,51 +32,26 @@ router.post('/products', upload.single('file'), async (req, res) => {
         }
 
         if (dryRun) {
-          // Check if exists
-          const checkResult = await client.query(
-            'SELECT id FROM products WHERE upc = $1',
-            [upc]
-          )
-          if (checkResult.rows.length > 0) {
-            updated++
-          } else {
-            inserted++
-          }
+          const checkResult = await client.query('SELECT id FROM products WHERE upc = $1', [upc])
+          if (checkResult.rows.length > 0) updated++
+          else inserted++
         } else {
-          // Upsert
           const upsertResult = await client.query(
-            `INSERT INTO products (upc, name, price, qty)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (upc) DO UPDATE SET
-               name = EXCLUDED.name,
-               price = EXCLUDED.price,
-               qty = EXCLUDED.qty,
-               updated_at = CURRENT_TIMESTAMP
+            `INSERT INTO products (upc, name, price, qty) VALUES ($1, $2, $3, $4)
+             ON CONFLICT (upc) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price, qty = EXCLUDED.qty, updated_at = CURRENT_TIMESTAMP
              RETURNING (xmax = 0) AS inserted`,
             [upc, name, price, qty]
           )
-
-          if (upsertResult.rows[0].inserted) {
-            inserted++
-          } else {
-            updated++
-          }
+          if (upsertResult.rows[0].inserted) inserted++
+          else updated++
         }
       }
 
       return { inserted, updated, skipped }
     })
 
-    res.json({
-      ok: true,
-      dryRun,
-      sheet: wb.SheetNames[0],
-      totalRows: rows.length,
-      ...result,
-      note: dryRun ? 'Dry run only. Add ?dryRun=0 to commit changes.' : 'Import committed.',
-    })
+    res.json({ ok: true, dryRun, sheet: wb.SheetNames[0], totalRows: rows.length, ...result })
   } catch (error) {
-    console.error('Import error:', error)
     res.status(500).json({ error: error.message })
   }
 })

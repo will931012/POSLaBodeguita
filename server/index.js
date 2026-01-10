@@ -1,185 +1,120 @@
-require("dotenv").config();
+require('dotenv').config()
+const express = require('express')
+const cors = require('cors')
+const helmet = require('helmet')
+const morgan = require('morgan')
+const rateLimit = require('express-rate-limit')
+const { initDatabase } = require('./utils/init-db')
 
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
-
-const { initDatabase } = require("./utils/init-db");
-const { pool } = require("./config/database");
-
-const app = express();
+const app = express()
 
 // ============================================
-// SECURITY MIDDLEWARE
+// SECURITY & MIDDLEWARE
 // ============================================
-app.use(
-  helmet({
-    crossOriginResourcePolicy: false,
-  })
-);
+app.use(helmet())
 
-// ============================================
-// CORS
-// ============================================
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL]
-  : [];
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+}))
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.length === 0) {
-        return callback(null, true);
-      }
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-// ============================================
-// BODY PARSER
-// ============================================
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// ============================================
-// LOGGING
-// ============================================
-if (process.env.ENABLE_LOGGING === "true") {
-  app.use(morgan("combined"));
+if (process.env.ENABLE_LOGGING === 'true') {
+  app.use(morgan('combined'))
 }
 
-// ============================================
-// RATE LIMITING
-// ============================================
-if (process.env.ENABLE_RATE_LIMITING === "true") {
-  app.use(
-    "/api/",
-    rateLimit({
-      windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 900000),
-      max: Number(process.env.RATE_LIMIT_MAX_REQUESTS || 100),
-      standardHeaders: true,
-      legacyHeaders: false,
-    })
-  );
+if (process.env.ENABLE_RATE_LIMITING === 'true') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+  })
+  app.use('/api/', limiter)
 }
 
 // ============================================
 // ROUTES
 // ============================================
-app.use("/api/products", require("./routes/products"));
-app.use("/api/sales", require("./routes/sales"));
-app.use("/api/receipts", require("./routes/receipts"));
-app.use("/api/import", require("./routes/import"));
-app.use("/report", require("./routes/reports"));
+app.use('/api/products', require('./routes/products'))
+app.use('/api/sales', require('./routes/sales'))
+app.use('/api/receipts', require('./routes/receipts'))
+app.use('/api/import', require('./routes/import'))
+app.use('/report', require('./routes/reports'))
 
-// ============================================
-// HEALTH CHECK
-// ============================================
-app.get("/api/health", async (req, res) => {
-  try {
-    await pool.query("SELECT 1");
-    res.json({
-      ok: true,
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || "development",
-      database: "postgresql",
-    });
-  } catch {
-    res.status(503).json({
-      ok: false,
-      database: "down",
-    });
-  }
-});
-
-// ============================================
-// ROOT
-// ============================================
-app.get("/", (req, res) => {
+// Health check
+app.get('/api/health', (req, res) => {
   res.json({
-    name: "POS Compassion & Love API",
-    version: "2.0.0",
-    database: "PostgreSQL",
-    endpoints: {
-      health: "/api/health",
-      products: "/api/products",
-      sales: "/api/sales",
-      receipts: "/api/receipts",
-      import: "/api/import",
-      reports: "/report",
-    },
-  });
-});
+    ok: true,
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    database: 'postgresql',
+  })
+})
 
-// ============================================
-// ERROR HANDLING
-// ============================================
+// Root
+app.get('/', (req, res) => {
+  res.json({
+    name: 'POS Compassion & Love API',
+    version: '2.0.0',
+    database: 'PostgreSQL',
+    status: 'running',
+  })
+})
+
+// 404
 app.use((req, res) => {
-  res.status(404).json({
-    error: "Not Found",
-    path: req.path,
-  });
-});
+  res.status(404).json({ error: 'Not Found' })
+})
 
+// Error handler
 app.use((err, req, res, next) => {
-  console.error("❌ Server error:", err);
-
+  console.error('Server error:', err)
   res.status(err.status || 500).json({
-    error:
-      process.env.NODE_ENV === "production"
-        ? "Internal server error"
-        : err.message,
-  });
-});
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+  })
+})
 
 // ============================================
 // START SERVER
 // ============================================
-const PORT = Number(process.env.PORT || 4000);
-const HOST = "0.0.0.0";
+const PORT = process.env.PORT || 4000
+const HOST = '0.0.0.0'
 
 async function startServer() {
-  // Init DB WITHOUT blocking startup
-  initDatabase().catch((err) => {
-    console.error("⚠️ Database init failed (server still running):", err);
-  });
-
-  app.listen(PORT, HOST, () => {
-    console.log(`
-╔═══════════════════════════════════════════════════╗
-║   🚀 POS API Server Running                       ║
-║                                                   ║
-║   Environment: ${(process.env.NODE_ENV || "dev").padEnd(33)}║
-║   Port:        ${PORT.toString().padEnd(33)}║
-║   Database:    PostgreSQL                         ║
-╚═══════════════════════════════════════════════════╝
-    `);
-  });
+  try {
+    await initDatabase()
+    
+    app.listen(PORT, HOST, () => {
+      console.log(`
+╔════════════════════════════════════════════╗
+║  🚀 POS API Server                         ║
+║                                            ║
+║  Environment: ${(process.env.NODE_ENV || 'development').padEnd(28)}║
+║  Port: ${PORT.toString().padEnd(35)}║
+║  Database: PostgreSQL                      ║
+║                                            ║
+║  ✅ Server is ready!                       ║
+╚════════════════════════════════════════════╝
+      `)
+    })
+  } catch (error) {
+    console.error('❌ Failed to start server:', error)
+    process.exit(1)
+  }
 }
 
-startServer();
+startServer()
 
-// ============================================
-// GRACEFUL SHUTDOWN
-// ============================================
-async function shutdown(signal) {
-  console.log(`⚠️ ${signal} received, shutting down gracefully...`);
-  await pool.end();
-  process.exit(0);
-}
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down...')
+  process.exit(0)
+})
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down...')
+  process.exit(0)
+})
 
-module.exports = app;
+module.exports = app

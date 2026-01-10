@@ -1,14 +1,14 @@
 {
   "name": "pos-backend",
   "version": "2.0.0",
-  "description": "Backend para POS Compassion & Love con PostgreSQL",
+  "description": "Backend POS - PostgreSQL + Railway",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
-    "migrate": "node utils/migrate-from-sqlite.js"
+    "dev": "nodemon index.js"
   },
-  "keywords": ["pos", "point-of-sale", "postgresql", "express"],
+  "keywords": ["pos", "postgresql", "railway"],
   "author": "Compassion & Love",
   "license": "MIT",
   "dependencies": {
@@ -19,17 +19,15 @@
     "multer": "^1.4.5-lts.1",
     "xlsx": "^0.18.5",
     "nodemailer": "^6.9.7",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
     "helmet": "^7.1.0",
     "express-rate-limit": "^7.1.5",
     "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "better-sqlite3": "^9.2.2"
+    "nodemon": "^3.0.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }
