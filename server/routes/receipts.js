@@ -1,28 +1,80 @@
 const express = require('express')
+const { query } = require('../config/database')
 
-module.exports = function(db) {
-  const router = express.Router()
+const router = express.Router()
 
-  router.get('/', (req, res) => {
-    const rows = db.prepare(`
-      SELECT id, sale_id, supplier, notes, created_at
-      FROM receipts
-      ORDER BY created_at DESC, id DESC
-      LIMIT 100
-    `).all()
-    res.json(rows)
-  })
-
-  router.post('/', (req, res) => {
-    const { sale_id, supplier, notes, content } = req.body
-    const info = db.prepare(`
-      INSERT INTO receipts (sale_id, supplier, notes, content)
-      VALUES (?, ?, ?, ?)
-    `).run(sale_id || null, supplier || null, notes || null, content || null)
+// GET /api/receipts - List receipts
+router.get('/', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '100'), 500)
     
-    const row = db.prepare('SELECT * FROM receipts WHERE id = ?').get(info.lastInsertRowid)
-    res.status(201).json(row)
-  })
+    const result = await query(
+      `SELECT id, sale_id, supplier, notes, created_at
+       FROM receipts
+       ORDER BY created_at DESC, id DESC
+       LIMIT $1`,
+      [limit]
+    )
 
-  return router
-}
+    res.json(result.rows)
+  } catch (error) {
+    console.error('Get receipts error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// GET /api/receipts/:id - Get single receipt
+router.get('/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+
+    const result = await query(
+      'SELECT * FROM receipts WHERE id = $1',
+      [id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Receipt not found' })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('Get receipt error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// POST /api/receipts - Create receipt
+router.post('/', async (req, res) => {
+  try {
+    const { sale_id, supplier, notes, content } = req.body
+
+    const result = await query(
+      `INSERT INTO receipts (sale_id, supplier, notes, content)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [sale_id || null, supplier || null, notes || null, content || null]
+    )
+
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error('Create receipt error:', error)
+    res.status(400).json({ error: error.message })
+  }
+})
+
+// DELETE /api/receipts/:id - Delete receipt
+router.delete('/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+
+    const result = await query('DELETE FROM receipts WHERE id = $1', [id])
+
+    res.json({ deleted: result.rowCount })
+  } catch (error) {
+    console.error('Delete receipt error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+module.exports = router
