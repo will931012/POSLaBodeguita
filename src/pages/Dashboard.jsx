@@ -186,7 +186,9 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link to="/sales">
-          <Card className="hover:shadow-xl transition-shadow cursor-pointer group">
+          <Card className="hover:shadow-xl transition-shadow cursor-pointer group 
+                 hover:border-primary-600 border border-transparent 
+                 hover:bg-primary-50">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
@@ -205,7 +207,9 @@ export default function Dashboard() {
 
         {hasRole(['admin', 'manager']) && (
           <Link to="/inventory">
-            <Card className="hover:shadow-xl transition-shadow cursor-pointer group">
+            <Card className="hover:shadow-xl transition-shadow cursor-pointer group 
+                 hover:border-primary-600 border border-transparent 
+                 hover:bg-primary-50">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
@@ -224,7 +228,9 @@ export default function Dashboard() {
         )}
 
         <Link to="/receipts">
-          <Card className="hover:shadow-xl transition-shadow cursor-pointer group">
+          <Card className="hover:shadow-xl transition-shadow cursor-pointer group 
+                 hover:border-primary-600 border border-transparent 
+                 hover:bg-primary-50">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
