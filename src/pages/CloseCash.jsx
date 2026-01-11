@@ -15,12 +15,14 @@ import Button from '@components/Button'
 import Card from '@components/Card'
 import Input from '@components/Input'
 import { toast } from 'sonner'
+import { useAuth } from '@/context/AuthContext'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 export default function CloseCash() {
+  const { token } = useAuth()
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date()
     return format(today, 'yyyy-MM-dd')
@@ -57,7 +59,9 @@ export default function CloseCash() {
   const loadDayData = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${API}/report/close?day=${selectedDate}`)
+      const res = await fetch(`${API}/report/close?day=${selectedDate}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       if (!res.ok) throw new Error('Failed to load data')
 
       const data = await res.json()
@@ -110,7 +114,10 @@ export default function CloseCash() {
 
       const res = await fetch(`${API}/report/close`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           day: selectedDate,
           counted_cash: countedCash,
@@ -237,8 +244,10 @@ export default function CloseCash() {
             <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <div className="text-xs font-semibold text-green-600 uppercase">Efectivo Sistema</div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-green-600 uppercase tracking-wider">
+                Efectivo
+              </div>
               <div className="text-2xl font-bold text-green-900 font-mono">
                 ${expected.cash.toFixed(2)}
               </div>
@@ -251,8 +260,10 @@ export default function CloseCash() {
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
               <CreditCard className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <div className="text-xs font-semibold text-blue-600 uppercase">Tarjeta Sistema</div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
+                Tarjeta
+              </div>
               <div className="text-2xl font-bold text-blue-900 font-mono">
                 ${expected.card.toFixed(2)}
               </div>
@@ -265,8 +276,10 @@ export default function CloseCash() {
             <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
               <Calculator className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <div className="text-xs font-semibold text-purple-600 uppercase">Total Sistema</div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-purple-600 uppercase tracking-wider">
+                Total
+              </div>
               <div className="text-2xl font-bold text-purple-900 font-mono">
                 ${expected.total.toFixed(2)}
               </div>
@@ -274,14 +287,16 @@ export default function CloseCash() {
           </div>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200">
+        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gray-600 rounded-xl flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <div className="text-xs font-semibold text-orange-600 uppercase">Ventas</div>
-              <div className="text-2xl font-bold text-orange-900 font-mono">
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                Ventas
+              </div>
+              <div className="text-2xl font-bold text-gray-900 font-mono">
                 {expected.salesCount}
               </div>
             </div>
@@ -289,6 +304,7 @@ export default function CloseCash() {
         </Card>
       </div>
 
+      {/* Panel de Conteo y Análisis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Panel de Conteo */}
         <Card title="Conteo del Cajero" icon={Calculator}>

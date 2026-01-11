@@ -18,11 +18,13 @@ import Button from '@components/Button'
 import Card from '@components/Card'
 import Input from '@components/Input'
 import { toast } from 'sonner'
+import { useAuth } from '@/context/AuthContext'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const PAGE_SIZE = 50
 
 export default function Inventory() {
+  const { token } = useAuth()
   const [mode, setMode] = useState('search') // 'search' | 'add' | 'import' | 'low'
   const [products, setProducts] = useState([])
   const [total, setTotal] = useState(0)
@@ -60,7 +62,9 @@ export default function Inventory() {
         ...(mode === 'low' && { low: '1' }),
       })
 
-      const res = await fetch(`${API}/api/products?${params}`)
+      const res = await fetch(`${API}/api/products?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       if (!res.ok) throw new Error('Failed to load products')
       
       const data = await res.json()
@@ -109,7 +113,10 @@ export default function Inventory() {
     try {
       const res = await fetch(`${API}/api/products`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           upc: addForm.upc.trim() || null,
           name: addForm.name.trim(),
@@ -154,9 +161,12 @@ export default function Inventory() {
     }
 
     try {
-      const res = await fetch(`${API}/api/products/${id}`, {
+            const res = await fetch(`${API}/api/products/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           upc: editForm.upc.trim() || null,
           name: editForm.name.trim(),
@@ -186,7 +196,10 @@ export default function Inventory() {
     if (!confirm(`¿Eliminar "${name}"?`)) return
 
     try {
-      const res = await fetch(`${API}/api/products/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/api/products/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       if (!res.ok) throw new Error('Error al eliminar')
 
       setProducts(products.filter(p => p.id !== id))
@@ -246,6 +259,7 @@ export default function Inventory() {
 
       const res = await fetch(`${API}/api/import/products?dryRun=${dryRun ? '1' : '0'}`, {
         method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       })
 

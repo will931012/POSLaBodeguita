@@ -8,18 +8,16 @@ import {
   ShoppingCart,
   CreditCard,
   DollarSign,
-  X,
   Check,
-  Printer,
 } from 'lucide-react'
 import Button from '@components/Button'
 import Card from '@components/Card'
 import Input from '@components/Input'
+import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-// Helper para convertir a número
 const toNumber = (val) => {
   if (val === null || val === undefined) return 0
   const num = parseFloat(val)
@@ -27,6 +25,7 @@ const toNumber = (val) => {
 }
 
 export default function Sales() {
+  const { token } = useAuth()
   const [mode, setMode] = useState('idle')
   const [cart, setCart] = useState({})
   const [products, setProducts] = useState([])
@@ -57,7 +56,11 @@ export default function Sales() {
     searchTimerRef.current = setTimeout(async () => {
       try {
         setSearching(true)
-        const res = await fetch(`${API}/api/products?q=${encodeURIComponent(searchQuery)}&limit=10`)
+        const res = await fetch(`${API}/api/products?q=${encodeURIComponent(searchQuery)}&limit=10`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
         if (!res.ok) throw new Error('Search failed')
         
         const data = await res.json()
@@ -71,7 +74,7 @@ export default function Sales() {
     }, 300)
 
     return () => clearTimeout(searchTimerRef.current)
-  }, [searchQuery])
+  }, [searchQuery, token])
 
   // ============================================
   // CART MANAGEMENT
@@ -82,7 +85,6 @@ export default function Sales() {
     const currentQty = cart[productId] || 0
     const newQty = currentQty + 1
 
-    // Check stock (skip for temp products)
     if (!isTemp) {
       const availableQty = toNumber(product.qty)
       if (newQty > availableQty) {
@@ -93,7 +95,6 @@ export default function Sales() {
 
     setCart({ ...cart, [productId]: newQty })
     
-    // Add to products list if not already there
     if (!products.find(p => p.id === productId) && !tempProducts.find(p => p.id === productId)) {
       if (isTemp) {
         setTempProducts([...tempProducts, product])
@@ -115,7 +116,6 @@ export default function Sales() {
       return
     }
 
-    // Check stock for non-temp products
     if (product && !product.temp) {
       const availableQty = toNumber(product.qty)
       if (newQty > availableQty) {
@@ -198,7 +198,6 @@ export default function Sales() {
     }
 
     try {
-      // Separate inventory items from temp items
       const inventoryItems = products
         .filter(p => cart[p.id])
         .map(p => ({
@@ -206,10 +205,12 @@ export default function Sales() {
           qty: cart[p.id],
         }))
 
-      // Create sale
       const saleRes = await fetch(`${API}/api/sales`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           items: inventoryItems,
           payment: {
@@ -228,14 +229,15 @@ export default function Sales() {
 
       const sale = await saleRes.json()
 
-      // Generate receipt
       const receiptHTML = generateReceipt(sale)
 
-      // Save receipt
       try {
         await fetch(`${API}/api/receipts`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({
             sale_id: sale.id,
             content: receiptHTML,
@@ -245,10 +247,7 @@ export default function Sales() {
         console.error('Receipt save error:', error)
       }
 
-      // Print receipt
       printReceipt(receiptHTML)
-
-      // Reset
       clearCart()
       setMode('idle')
       toast.success('¡Venta completada!')
@@ -380,7 +379,6 @@ export default function Sales() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-bold text-gradient">Nueva Venta</h1>
         <Button variant="outline" onClick={() => { clearCart(); setMode('idle') }}>
@@ -389,9 +387,7 @@ export default function Sales() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Search & Products */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Search */}
           <Card>
             <Input
               icon={Search}
@@ -401,7 +397,6 @@ export default function Sales() {
               autoFocus
             />
 
-            {/* Search Results */}
             <AnimatePresence>
               {searchResults.length > 0 && (
                 <motion.div
@@ -438,7 +433,6 @@ export default function Sales() {
             )}
           </Card>
 
-          {/* Temp Product Form */}
           <Card title="Producto Temporal" icon={Plus}>
             <form onSubmit={addTempProduct} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -466,11 +460,9 @@ export default function Sales() {
           </Card>
         </div>
 
-        {/* Right Column - Cart */}
         <div className="lg:sticky lg:top-24 space-y-6">
           <Card title="Carrito" icon={ShoppingCart}>
             <div className="space-y-4">
-              {/* Cart Items */}
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 <AnimatePresence>
                   {Object.entries(cart).map(([productId, qty]) => {
@@ -547,7 +539,6 @@ export default function Sales() {
                 )}
               </div>
 
-              {/* Subtotal */}
               <div className="border-t-2 border-gray-200 pt-4">
                 <div className="flex justify-between items-center text-2xl font-bold">
                   <span>TOTAL</span>
@@ -555,9 +546,8 @@ export default function Sales() {
                 </div>
               </div>
 
-              {/* Payment Method */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700 uppercase">
+                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider">
                   Método de Pago
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -586,7 +576,6 @@ export default function Sales() {
                 </div>
               </div>
 
-              {/* Cash Input */}
               {paymentMethod === 'cash' && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -618,7 +607,6 @@ export default function Sales() {
                 </motion.div>
               )}
 
-              {/* Actions */}
               <div className="space-y-2">
                 <Button
                   className="w-full"

@@ -6,12 +6,11 @@ import {
   Package, 
   Receipt,
   TrendingUp,
-  ArrowRight
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import Card, { StatCard } from '@components/Card'
-import Button from '@components/Button'
+import { useAuth } from '@/context/AuthContext'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -22,6 +21,7 @@ const toNumber = (val) => {
 }
 
 export default function Dashboard() {
+  const { token, hasRole } = useAuth()
   const [salesData, setSalesData] = useState([])
   const [todayTotal, setTodayTotal] = useState(0)
   const [todayCount, setTodayCount] = useState(0)
@@ -36,7 +36,11 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${API}/api/sales/today`)
+      const res = await fetch(`${API}/api/sales/today`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      })
       if (!res.ok) throw new Error('Failed to load sales')
       
       const data = await res.json()
@@ -196,23 +200,25 @@ export default function Dashboard() {
           </Card>
         </Link>
 
-        <Link to="/inventory">
-          <Card className="hover:shadow-xl transition-shadow cursor-pointer group">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                  Inventario
+        {hasRole(['admin', 'manager']) && (
+          <Link to="/inventory">
+            <Card className="hover:shadow-xl transition-shadow cursor-pointer group">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
+                    Inventario
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    Gestionar
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Gestionar
+                <div className="w-12 h-12 bg-gradient-success rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Package className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <div className="w-12 h-12 bg-gradient-success rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Package className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </Card>
-        </Link>
+            </Card>
+          </Link>
+        )}
 
         <Link to="/receipts">
           <Card className="hover:shadow-xl transition-shadow cursor-pointer group">

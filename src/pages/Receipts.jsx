@@ -1,125 +1,350 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Receipt, Search, Eye, Printer, Trash2, Calendar, Filter } from 'lucide-react'
+import {
+  Search,
+  Plus,
+  Minus,
+  Trash2,
+  ShoppingCart,
+  CreditCard,
+  DollarSign,
+  Check,
+} from 'lucide-react'
 import Button from '@components/Button'
 import Card from '@components/Card'
 import Input from '@components/Input'
+import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-export default function Receipts() {
-  const [receipts, setReceipts] = useState([])
-  const [filteredReceipts, setFilteredReceipts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedReceipt, setSelectedReceipt] = useState(null)
-  const [showModal, setShowModal] = useState(false)
+const toNumber = (val) => {
+  if (val === null || val === undefined) return 0
+  const num = parseFloat(val)
+  return isNaN(num) ? 0 : num
+}
+
+export default function Sales() {
+  const { token } = useAuth()
+  const [mode, setMode] = useState('idle')
+  const [cart, setCart] = useState({})
+  const [products, setProducts] = useState([])
+  const [tempProducts, setTempProducts] = useState([])
   
-  // Filtros
-  const [dateFilter, setDateFilter] = useState('all') // 'all' | 'today' | 'week' | 'month'
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  
+  const [paymentMethod, setPaymentMethod] = useState('card')
+  const [cashReceived, setCashReceived] = useState('')
+  
+  const [tempForm, setTempForm] = useState({ name: '', price: '', qty: '1' })
+  
+  const searchTimerRef = useRef(null)
 
   // ============================================
-  // CARGAR RECIBOS
-  // ============================================
-  useEffect(() => {
-    loadReceipts()
-  }, [])
-
-  const loadReceipts = async () => {
-    try {
-      setLoading(true)
-      const res = await fetch(`${API}/api/receipts`)
-      if (!res.ok) throw new Error('Failed to load receipts')
-      
-      const data = await res.json()
-      setReceipts(data)
-      setFilteredReceipts(data)
-    } catch (error) {
-      console.error('Load error:', error)
-      toast.error('Error al cargar recibos')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ============================================
-  // FILTROS
+  // SEARCH
   // ============================================
   useEffect(() => {
-    let filtered = [...receipts]
-
-    // Filtro por fecha
-    if (dateFilter !== 'all') {
-      const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
-      filtered = filtered.filter(receipt => {
-        const receiptDate = new Date(receipt.created_at)
-        
-        switch (dateFilter) {
-          case 'today':
-            return receiptDate >= today
-          case 'week':
-            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-            return receiptDate >= weekAgo
-          case 'month':
-            const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
-            return receiptDate >= monthAgo
-          default:
-            return true
-        }
-      })
-    }
-
-    // Filtro por búsqueda
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(receipt => 
-        receipt.id.toString().includes(query) ||
-        receipt.sale_id?.toString().includes(query) ||
-        receipt.supplier?.toLowerCase().includes(query) ||
-        receipt.notes?.toLowerCase().includes(query)
-      )
-    }
-
-    setFilteredReceipts(filtered)
-  }, [receipts, searchQuery, dateFilter])
-
-  // ============================================
-  // VER RECIBO
-  // ============================================
-  const viewReceipt = async (receipt) => {
-    try {
-      const res = await fetch(`${API}/api/receipts/${receipt.id}`)
-      if (!res.ok) throw new Error('Failed to load receipt details')
-      
-      const data = await res.json()
-      setSelectedReceipt(data)
-      setShowModal(true)
-    } catch (error) {
-      toast.error('Error al cargar el recibo')
-    }
-  }
-
-  // ============================================
-  // IMPRIMIR RECIBO
-  // ============================================
-  const printReceipt = (receipt) => {
-    if (!receipt.content) {
-      toast.error('Este recibo no tiene contenido para imprimir')
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    
+    if (!searchQuery.trim()) {
+      setSearchResults([])
       return
     }
 
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        setSearching(true)
+        const res = await fetch(`${API}/api/products?q=${encodeURIComponent(searchQuery)}&limit=10`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        if (!res.ok) throw new Error('Search failed')
+        
+        const data = await res.json()
+        setSearchResults(data.rows || [])
+      } catch (error) {
+        console.error('Search error:', error)
+        toast.error('Error al buscar productos')
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(searchTimerRef.current)
+  }, [searchQuery, token])
+
+  // ============================================
+  // CART MANAGEMENT
+  // ============================================
+  const addToCart = (product) => {
+    const productId = product.id
+    const isTemp = product.temp || false
+    const currentQty = cart[productId] || 0
+    const newQty = currentQty + 1
+
+    if (!isTemp) {
+      const availableQty = toNumber(product.qty)
+      if (newQty > availableQty) {
+        toast.error(`Solo hay ${availableQty} unidades disponibles`)
+        return
+      }
+    }
+
+    setCart({ ...cart, [productId]: newQty })
+    
+    if (!products.find(p => p.id === productId) && !tempProducts.find(p => p.id === productId)) {
+      if (isTemp) {
+        setTempProducts([...tempProducts, product])
+      } else {
+        setProducts([...products, product])
+      }
+    }
+
+    toast.success(`${product.name} agregado`)
+    setSearchQuery('')
+    setSearchResults([])
+  }
+
+  const updateQuantity = (productId, newQty) => {
+    const product = [...products, ...tempProducts].find(p => p.id === productId)
+    
+    if (newQty <= 0) {
+      removeFromCart(productId)
+      return
+    }
+
+    if (product && !product.temp) {
+      const availableQty = toNumber(product.qty)
+      if (newQty > availableQty) {
+        toast.error(`Solo hay ${availableQty} unidades`)
+        return
+      }
+    }
+
+    setCart({ ...cart, [productId]: newQty })
+  }
+
+  const removeFromCart = (productId) => {
+    const newCart = { ...cart }
+    delete newCart[productId]
+    setCart(newCart)
+    
+    const product = [...products, ...tempProducts].find(p => p.id === productId)
+    if (product) {
+      toast.info(`${product.name} eliminado del carrito`)
+    }
+  }
+
+  const clearCart = () => {
+    setCart({})
+    setProducts([])
+    setTempProducts([])
+    setPaymentMethod('card')
+    setCashReceived('')
+    toast.info('Carrito vaciado')
+  }
+
+  // ============================================
+  // TEMP PRODUCTS
+  // ============================================
+  const addTempProduct = (e) => {
+    e.preventDefault()
+    
+    if (!tempForm.name.trim() || !tempForm.price) {
+      toast.error('Nombre y precio son obligatorios')
+      return
+    }
+
+    const tempProduct = {
+      id: -Date.now(),
+      name: tempForm.name.trim(),
+      price: parseFloat(tempForm.price),
+      qty: 999999,
+      temp: true,
+    }
+
+    addToCart(tempProduct)
+    setTempForm({ name: '', price: '', qty: '1' })
+  }
+
+  // ============================================
+  // CALCULATIONS
+  // ============================================
+  const subtotal = Object.entries(cart).reduce((sum, [productId, qty]) => {
+    const product = [...products, ...tempProducts].find(p => p.id === parseInt(productId))
+    if (!product) return sum
+    return sum + (toNumber(product.price) * qty)
+  }, 0)
+
+  const cashReceivedNum = toNumber(cashReceived)
+  const changeDue = paymentMethod === 'cash' ? Math.max(0, cashReceivedNum - subtotal) : 0
+  const shortfall = paymentMethod === 'cash' ? Math.max(0, subtotal - cashReceivedNum) : 0
+
+  // ============================================
+  // COMPLETE SALE
+  // ============================================
+  const completeSale = async () => {
+    if (Object.keys(cart).length === 0) {
+      toast.error('El carrito está vacío')
+      return
+    }
+
+    if (paymentMethod === 'cash' && cashReceivedNum < subtotal) {
+      toast.error('Efectivo insuficiente')
+      return
+    }
+
+    try {
+      const inventoryItems = products
+        .filter(p => cart[p.id])
+        .map(p => ({
+          product_id: p.id,
+          qty: cart[p.id],
+        }))
+
+      const saleRes = await fetch(`${API}/api/sales`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: inventoryItems,
+          payment: {
+            method: paymentMethod,
+            cash_received: paymentMethod === 'cash' ? cashReceivedNum : null,
+            change_due: paymentMethod === 'cash' ? changeDue : 0,
+          },
+          override_total: subtotal,
+        }),
+      })
+
+      if (!saleRes.ok) {
+        const error = await saleRes.json()
+        throw new Error(error.error || 'Error al crear venta')
+      }
+
+      const sale = await saleRes.json()
+
+      const receiptHTML = generateReceipt(sale)
+
+      try {
+        await fetch(`${API}/api/receipts`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sale_id: sale.id,
+            content: receiptHTML,
+          }),
+        })
+      } catch (error) {
+        console.error('Receipt save error:', error)
+      }
+
+      printReceipt(receiptHTML)
+      clearCart()
+      setMode('idle')
+      toast.success('¡Venta completada!')
+    } catch (error) {
+      console.error('Sale error:', error)
+      toast.error(error.message || 'Error al completar la venta')
+    }
+  }
+
+  // ============================================
+  // RECEIPT GENERATION
+  // ============================================
+  const generateReceipt = (sale) => {
+    const allProducts = [...products, ...tempProducts]
+    const items = Object.entries(cart).map(([productId, qty]) => {
+      const product = allProducts.find(p => p.id === parseInt(productId))
+      return {
+        name: product?.name || 'Producto',
+        qty,
+        price: toNumber(product?.price || 0),
+        temp: product?.temp || false,
+      }
+    })
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Recibo #${sale.id}</title>
+        <style>
+          body { font-family: 'Courier New', monospace; max-width: 300px; margin: 0 auto; padding: 10px; }
+          .center { text-align: center; }
+          .header { font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+          .line { border-top: 1px dashed #000; margin: 10px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 4px 0; }
+          .right { text-align: right; }
+          .total { font-weight: bold; font-size: 14px; }
+          .temp-badge { background: #fbbf24; color: #000; padding: 1px 4px; font-size: 9px; border-radius: 3px; }
+          @media print {
+            @page { size: 80mm auto; margin: 0; }
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="center header">Compassion & Love</div>
+        <div class="center">Recibo #${sale.id}</div>
+        <div class="center">${new Date().toLocaleString('es-ES')}</div>
+        <div class="line"></div>
+        <table>
+          ${items.map(item => `
+            <tr>
+              <td>
+                ${item.name}${item.temp ? ' <span class="temp-badge">TEMP</span>' : ''}
+                <br><small>${item.qty} x $${item.price.toFixed(2)}</small>
+              </td>
+              <td class="right">$${(item.qty * item.price).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </table>
+        <div class="line"></div>
+        <table>
+          <tr class="total">
+            <td>TOTAL</td>
+            <td class="right">$${subtotal.toFixed(2)}</td>
+          </tr>
+          ${paymentMethod === 'cash' ? `
+            <tr>
+              <td>Efectivo</td>
+              <td class="right">$${cashReceivedNum.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Cambio</td>
+              <td class="right">$${changeDue.toFixed(2)}</td>
+            </tr>
+          ` : ''}
+        </table>
+        <div class="line"></div>
+        <div class="center">¡Gracias por su compra!</div>
+        <div class="center" style="margin-top: 20px;">
+          <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer;">Imprimir</button>
+        </div>
+      </body>
+      </html>
+    `
+  }
+
+  const printReceipt = (html) => {
     const printWindow = window.open('', 'PRINT', 'height=600,width=400')
     if (!printWindow) {
       toast.error('Popup bloqueado. Permite popups para imprimir.')
       return
     }
     
-    printWindow.document.write(receipt.content)
+    printWindow.document.write(html)
     printWindow.document.close()
     printWindow.focus()
     setTimeout(() => {
@@ -129,336 +354,281 @@ export default function Receipts() {
   }
 
   // ============================================
-  // ELIMINAR RECIBO
-  // ============================================
-  const deleteReceipt = async (id) => {
-    if (!confirm('¿Eliminar este recibo?')) return
-
-    try {
-      const res = await fetch(`${API}/api/receipts/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete')
-
-      setReceipts(receipts.filter(r => r.id !== id))
-      toast.success('Recibo eliminado')
-    } catch (error) {
-      toast.error('No se pudo eliminar el recibo')
-    }
-  }
-
-  // ============================================
   // RENDER
   // ============================================
+  if (mode === 'idle') {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="text-center"
+        >
+          <ShoppingCart className="w-24 h-24 mx-auto mb-6 text-primary-600" />
+          <h1 className="text-4xl font-bold text-gradient mb-4">Nueva Venta</h1>
+          <p className="text-gray-600 mb-8">Comienza a agregar productos al carrito</p>
+          <Button size="xl" onClick={() => setMode('active')}>
+            Iniciar Venta
+          </Button>
+        </motion.div>
+      </div>
+    )
+  }
+
+  const allProducts = [...products, ...tempProducts]
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-gradient">Recibos</h1>
-          <p className="text-gray-600 mt-1">Historial de transacciones</p>
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            icon={Calendar}
-            onClick={loadReceipts}
-            loading={loading}
-          >
-            Actualizar
-          </Button>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-4xl font-bold text-gradient">Nueva Venta</h1>
+        <Button variant="outline" onClick={() => { clearCart(); setMode('idle') }}>
+          Cancelar
+        </Button>
       </div>
 
-      {/* Filtros y Búsqueda */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <Input
-            icon={Search}
-            placeholder="Buscar por ID, proveedor o notas..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <Input
+              icon={Search}
+              placeholder="Buscar producto por nombre o código..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
 
-        <Card>
-          <div className="flex gap-2">
-            {[
-              { value: 'all', label: 'Todos' },
-              { value: 'today', label: 'Hoy' },
-              { value: 'week', label: 'Semana' },
-              { value: 'month', label: 'Mes' },
-            ].map(filter => (
-              <button
-                key={filter.value}
-                onClick={() => setDateFilter(filter.value)}
-                className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
-                  dateFilter === filter.value
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border-2 border-blue-200"
-        >
-          <div className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">
-            Total Recibos
-          </div>
-          <div className="text-4xl font-bold text-blue-900 font-mono">
-            {filteredReceipts.length}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border-2 border-green-200"
-        >
-          <div className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-2">
-            Ventas
-          </div>
-          <div className="text-4xl font-bold text-green-900 font-mono">
-            {filteredReceipts.filter(r => r.sale_id).length}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border-2 border-purple-200"
-        >
-          <div className="text-sm font-semibold text-purple-600 uppercase tracking-wider mb-2">
-            Otros
-          </div>
-          <div className="text-4xl font-bold text-purple-900 font-mono">
-            {filteredReceipts.filter(r => !r.sale_id).length}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Lista de Recibos */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">ID</th>
-                <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Venta ID</th>
-                <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Fecha</th>
-                <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Proveedor</th>
-                <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Notas</th>
-                <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-12">
-                    <div className="spinner mx-auto"></div>
-                  </td>
-                </tr>
-              ) : filteredReceipts.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-12 text-gray-500">
-                    <Receipt className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                    <p>No hay recibos para mostrar</p>
-                  </td>
-                </tr>
-              ) : (
-                <AnimatePresence>
-                  {filteredReceipts.map((receipt) => (
-                    <motion.tr
-                      key={receipt.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+            <AnimatePresence>
+              {searchResults.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-4 space-y-2 max-h-96 overflow-y-auto"
+                >
+                  {searchResults.map(product => (
+                    <motion.button
+                      key={product.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={() => addToCart(product)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors text-left"
                     >
-                      <td className="p-4 font-mono font-semibold">
-                        #{receipt.id}
-                      </td>
-                      
-                      <td className="p-4">
-                        {receipt.sale_id ? (
-                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-lg font-mono text-sm font-semibold">
-                            #{receipt.sale_id}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      
-                      <td className="p-4">
-                        <div className="text-sm">
-                          <div className="font-semibold">
-                            {format(new Date(receipt.created_at), 'dd MMM yyyy', { locale: es })}
-                          </div>
-                          <div className="text-gray-500 font-mono">
-                            {format(new Date(receipt.created_at), 'HH:mm:ss')}
-                          </div>
+                      <div>
+                        <div className="font-semibold">{product.name}</div>
+                        <div className="text-sm text-gray-600">
+                          Stock: {toNumber(product.qty)} • ${toNumber(product.price).toFixed(2)}
                         </div>
-                      </td>
-                      
-                      <td className="p-4">
-                        {receipt.supplier || <span className="text-gray-400">-</span>}
-                      </td>
-                      
-                      <td className="p-4 max-w-xs truncate">
-                        {receipt.notes || <span className="text-gray-400">-</span>}
-                      </td>
-                      
-                      <td className="p-4">
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => viewReceipt(receipt)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Ver Detalles"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          
-                          {receipt.content && (
-                            <button
-                              onClick={() => printReceipt(receipt)}
-                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="Imprimir"
-                            >
-                              <Printer className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          <button
-                            onClick={() => deleteReceipt(receipt.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
+                      </div>
+                      <Plus className="w-5 h-5 text-primary-600" />
+                    </motion.button>
                   ))}
-                </AnimatePresence>
+                </motion.div>
               )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+            </AnimatePresence>
 
-      {/* Modal de Detalles */}
-      <AnimatePresence>
-        {showModal && selectedReceipt && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
-            >
-              {/* Header */}
-              <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">Recibo #{selectedReceipt.id}</h2>
-                    <p className="text-primary-100 mt-1">
-                      {format(new Date(selectedReceipt.created_at), 'dd MMMM yyyy • HH:mm', { locale: es })}
-                    </p>
+            {searching && (
+              <div className="mt-4 text-center text-gray-500">
+                <div className="spinner mx-auto"></div>
+              </div>
+            )}
+          </Card>
+
+          <Card title="Producto Temporal" icon={Plus}>
+            <form onSubmit={addTempProduct} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  label="Nombre"
+                  placeholder="Ej: Descuento especial"
+                  value={tempForm.name}
+                  onChange={(e) => setTempForm({ ...tempForm, name: e.target.value })}
+                />
+                <Input
+                  label="Precio"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={tempForm.price}
+                  onChange={(e) => setTempForm({ ...tempForm, price: e.target.value })}
+                />
+                <div className="flex items-end">
+                  <Button type="submit" className="w-full">
+                    Agregar Temp
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </Card>
+        </div>
+
+        <div className="lg:sticky lg:top-24 space-y-6">
+          <Card title="Carrito" icon={ShoppingCart}>
+            <div className="space-y-4">
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                <AnimatePresence>
+                  {Object.entries(cart).map(([productId, qty]) => {
+                    const product = allProducts.find(p => p.id === parseInt(productId))
+                    if (!product) return null
+
+                    const price = toNumber(product.price)
+                    const itemTotal = price * qty
+
+                    return (
+                      <motion.div
+                        key={productId}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="bg-gray-50 rounded-xl p-4"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="font-semibold">{product.name}</div>
+                            {product.temp && (
+                              <span className="inline-block px-2 py-1 bg-yellow-200 text-yellow-900 text-xs rounded mt-1">
+                                TEMP
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeFromCart(product.id)}
+                            className="p-1 hover:bg-red-100 rounded transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateQuantity(product.id, qty - 1)}
+                              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-100"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <input
+                              type="number"
+                              value={qty}
+                              onChange={(e) => updateQuantity(product.id, parseInt(e.target.value) || 0)}
+                              className="w-16 text-center border-2 border-gray-200 rounded-lg py-1"
+                            />
+                            <button
+                              onClick={() => updateQuantity(product.id, qty + 1)}
+                              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-100"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="font-mono font-bold text-primary-600">
+                            ${itemTotal.toFixed(2)}
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-gray-500 mt-2">
+                          ${price.toFixed(2)} × {qty}
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
+
+                {Object.keys(cart).length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                    <p>Carrito vacío</p>
                   </div>
+                )}
+              </div>
+
+              <div className="border-t-2 border-gray-200 pt-4">
+                <div className="flex justify-between items-center text-2xl font-bold">
+                  <span>TOTAL</span>
+                  <span className="font-mono text-primary-600">${subtotal.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  Método de Pago
+                </label>
+                <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => setShowModal(false)}
-                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    onClick={() => setPaymentMethod('card')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-semibold transition-all ${
+                      paymentMethod === 'card'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <CreditCard className="w-5 h-5" />
+                    Tarjeta
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('cash')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-semibold transition-all ${
+                      paymentMethod === 'cash'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <DollarSign className="w-5 h-5" />
+                    Efectivo
                   </button>
                 </div>
               </div>
 
-              {/* Body */}
-              <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-200px)]">
-                {selectedReceipt.sale_id && (
-                  <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                    <div className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-1">
-                      Venta ID
-                    </div>
-                    <div className="text-2xl font-bold text-green-900 font-mono">
-                      #{selectedReceipt.sale_id}
-                    </div>
-                  </div>
-                )}
-
-                {selectedReceipt.supplier && (
-                  <div>
-                    <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Proveedor
-                    </div>
-                    <div className="text-lg">{selectedReceipt.supplier}</div>
-                  </div>
-                )}
-
-                {selectedReceipt.notes && (
-                  <div>
-                    <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Notas
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">{selectedReceipt.notes}</div>
-                  </div>
-                )}
-
-                {selectedReceipt.content && (
-                  <div>
-                    <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Contenido del Recibo
-                    </div>
-                    <div 
-                      className="bg-gray-50 rounded-lg p-4 border border-gray-200 overflow-x-auto"
-                      dangerouslySetInnerHTML={{ __html: selectedReceipt.content }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="bg-gray-50 p-6 flex gap-2">
-                {selectedReceipt.content && (
-                  <Button
-                    icon={Printer}
-                    onClick={() => printReceipt(selectedReceipt)}
-                  >
-                    Imprimir
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => setShowModal(false)}
+              {paymentMethod === 'cash' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-2"
                 >
-                  Cerrar
+                  <Input
+                    label="Efectivo Recibido"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={cashReceived}
+                    onChange={(e) => setCashReceived(e.target.value)}
+                    icon={DollarSign}
+                  />
+                  
+                  {cashReceivedNum > 0 && (
+                    <div className={`p-3 rounded-lg ${
+                      shortfall > 0 ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'
+                    }`}>
+                      <div className="flex justify-between font-semibold">
+                        <span>{shortfall > 0 ? 'Falta:' : 'Cambio:'}</span>
+                        <span className="font-mono">
+                          ${(shortfall > 0 ? shortfall : changeDue).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              <div className="space-y-2">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  icon={Check}
+                  onClick={completeSale}
+                  disabled={Object.keys(cart).length === 0 || (paymentMethod === 'cash' && shortfall > 0)}
+                >
+                  Completar Venta
+                </Button>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={clearCart}
+                >
+                  Vaciar Carrito
                 </Button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
