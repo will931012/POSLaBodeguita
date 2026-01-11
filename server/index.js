@@ -13,10 +13,33 @@ const app = express()
 // ============================================
 app.use(helmet())
 
+// CORS CONFIGURATION
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (Postman, apps móviles)
+    if (!origin) return callback(null, true)
+    
+    // Lista de orígenes permitidos
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://pos-la-bodeguita-bwq99ra3d-moraima-pineros-projects.vercel.app',
+      process.env.FRONTEND_URL,
+    ].filter(Boolean)
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      console.warn('❌ CORS blocked origin:', origin)
+      // En desarrollo: permitir todos
+      callback(null, true)
+      // En producción: descomentar la siguiente línea
+      // callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }))
 
 app.use(express.json({ limit: '10mb' }))
@@ -46,13 +69,13 @@ try {
   requireRole = authModule.requireRole
   
   if (!authRouter || !verifyToken || !requireRole) {
-    throw new Error('auth.js no exporta router, verifyToken o requireRole correctamente')
+    throw new Error('auth.js no exporta correctamente')
   }
-  console.log('✅ Auth module loaded successfully')
+  console.log('✅ Auth module loaded')
 } catch (error) {
-  console.error('❌ CRITICAL ERROR: No se pudo cargar routes/auth.js')
+  console.error('❌ CRITICAL: No se pudo cargar routes/auth.js')
   console.error('   Error:', error.message)
-  console.error('   Asegúrate de que el archivo routes/auth.js existe y exporta { router, verifyToken, requireRole }')
+  console.error('   Asegúrate de que routes/auth.js existe')
   process.exit(1)
 }
 
@@ -64,11 +87,9 @@ try {
   receiptsRouter = require('./routes/receipts')
   reportsRouter = require('./routes/reports')
   importRouter = require('./routes/import')
-  
-  console.log('✅ All route modules loaded successfully')
+  console.log('✅ All routes loaded')
 } catch (error) {
-  console.error('❌ ERROR loading route modules:', error.message)
-  console.error('   Verifica que todos los archivos de rutas existen en routes/')
+  console.error('❌ ERROR loading routes:', error.message)
   process.exit(1)
 }
 
