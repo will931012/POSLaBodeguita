@@ -22,69 +22,70 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route 
-        path="/" 
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LocationSelector />} 
-      />
-      <Route 
-        path="/login" 
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} 
-      />
-
-      {/* Protected Routes */}
+      {/* Public routes */}
       <Route
-        path="/*"
+        path="/"
         element={
-          <ProtectedRoute>
-            <Layout>
-              <Routes>
-                {/* Dashboard - All roles */}
-                <Route path="/dashboard" element={<Dashboard />} />
-                
-                {/* Sales - All roles */}
-                <Route path="/sales" element={<Sales />} />
-                
-                {/* Inventory - Manager and Admin only */}
-                <Route 
-                  path="/inventory" 
-                  element={
-                    <ProtectedRoute roles={['admin', 'manager']}>
-                      <Inventory />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* Receipts - All roles */}
-                <Route path="/receipts" element={<Receipts />} />
-                
-                {/* Close Cash - Manager and Admin only */}
-                <Route 
-                  path="/close" 
-                  element={
-                    <ProtectedRoute roles={['admin', 'manager']}>
-                      <CloseCash />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* Product Label - Manager and Admin only */}
-                <Route 
-                  path="/label/:id" 
-                  element={
-                    <ProtectedRoute roles={['admin', 'manager']}>
-                      <ProductLabel />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* 404 */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-          </ProtectedRoute>
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LocationSelector />
         }
       />
+      <Route
+        path="/login"
+        element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
+        }
+      />
+
+      {/* Protected layout */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        {/* Dashboard - all roles */}
+        <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Sales - all roles */}
+        <Route path="/sales" element={<Sales />} />
+
+        {/* Inventory - admin & manager */}
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute roles={['admin', 'manager']}>
+              <Inventory />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Receipts */}
+        <Route path="/receipts" element={<Receipts />} />
+
+        {/* Close cash */}
+        <Route
+          path="/close"
+          element={
+            <ProtectedRoute roles={['admin', 'manager']}>
+              <CloseCash />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Product label */}
+        <Route
+          path="/label/:id"
+          element={
+            <ProtectedRoute roles={['admin', 'manager']}>
+              <ProductLabel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Route>
     </Routes>
   )
 }
@@ -94,9 +95,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
-        <Toaster 
-          position="top-right" 
-          richColors 
+        <Toaster
+          position="top-right"
+          richColors
           closeButton
           expand={false}
           duration={4000}
