@@ -6,6 +6,7 @@ const { query, transaction } = require('../config/database')
 const upload = multer({ storage: multer.memoryStorage() })
 const router = express.Router()
 
+// POST /api/import/products
 router.post('/products', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
 
@@ -32,15 +33,23 @@ router.post('/products', upload.single('file'), async (req, res) => {
         }
 
         if (dryRun) {
-          const checkResult = await client.query('SELECT id FROM products WHERE upc = $1', [upc])
+          const checkResult = await client.query(
+            'SELECT id FROM products WHERE upc = $1 AND (location_id = $2 OR location_id IS NULL)',
+            [upc, req.location.id]
+          )
           if (checkResult.rows.length > 0) updated++
           else inserted++
         } else {
           const upsertResult = await client.query(
-            `INSERT INTO products (upc, name, price, qty) VALUES ($1, $2, $3, $4)
-             ON CONFLICT (upc) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price, qty = EXCLUDED.qty, updated_at = CURRENT_TIMESTAMP
+            `INSERT INTO products (upc, name, price, qty, location_id) 
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (upc) DO UPDATE 
+             SET name = EXCLUDED.name, 
+                 price = EXCLUDED.price, 
+                 qty = EXCLUDED.qty, 
+                 updated_at = CURRENT_TIMESTAMP
              RETURNING (xmax = 0) AS inserted`,
-            [upc, name, price, qty]
+            [upc, name, price, qty, req.location.id]
           )
           if (upsertResult.rows[0].inserted) inserted++
           else updated++
@@ -50,7 +59,14 @@ router.post('/products', upload.single('file'), async (req, res) => {
       return { inserted, updated, skipped }
     })
 
-    res.json({ ok: true, dryRun, sheet: wb.SheetNames[0], totalRows: rows.length, ...result })
+    res.json({ 
+      ok: true, 
+      dryRun, 
+      sheet: wb.SheetNames[0], 
+      totalRows: rows.length, 
+      location: req.location.name,
+      ...result 
+    })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }

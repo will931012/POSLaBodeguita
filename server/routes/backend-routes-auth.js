@@ -17,8 +17,7 @@ async function verifyToken(req, res, next) {
 
   try {
     const result = await query(
-      `SELECT s.*, u.id as user_id, u.name, u.role, u.location_id as user_location_id, 
-              l.id as location_id, l.name as location_name
+      `SELECT s.*, u.id as user_id, u.name, u.role, u.location_id as user_location_id, l.name as location_name
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        JOIN locations l ON l.id = s.location_id
@@ -27,7 +26,7 @@ async function verifyToken(req, res, next) {
     )
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid or expired token' })
+      return res.status(401).json({ error: 'Invalid token' })
     }
 
     req.session = result.rows[0]
@@ -35,11 +34,8 @@ async function verifyToken(req, res, next) {
       id: result.rows[0].user_id,
       name: result.rows[0].name,
       role: result.rows[0].role,
-      user_location_id: result.rows[0].user_location_id,
-    }
-    req.location = {
-      id: result.rows[0].location_id,
-      name: result.rows[0].location_name,
+      location_id: result.rows[0].location_id,
+      location_name: result.rows[0].location_name,
     }
     next()
   } catch (error) {
@@ -89,18 +85,15 @@ router.get('/users', async (req, res) => {
 
     let result
     if (locationId) {
+      // Users for specific location + admins (no location)
       result = await query(
         `SELECT id, name, role FROM users 
          WHERE active = true AND (location_id = $1 OR location_id IS NULL)
-         ORDER BY 
-           CASE role 
-             WHEN 'admin' THEN 1 
-             WHEN 'manager' THEN 2 
-             WHEN 'cashier' THEN 3 
-           END, name`,
+         ORDER BY role, name`,
         [locationId]
       )
     } else {
+      // All users
       result = await query(
         'SELECT id, name, role, location_id FROM users WHERE active = true ORDER BY role, name'
       )
@@ -119,6 +112,7 @@ router.post('/auth/login', async (req, res) => {
   try {
     const { user_id, pin, location_id } = req.body
 
+    // Validate user and PIN
     const userResult = await query(
       'SELECT * FROM users WHERE id = $1 AND active = true',
       [user_id]
@@ -130,21 +124,26 @@ router.post('/auth/login', async (req, res) => {
 
     const user = userResult.rows[0]
 
+    // Check PIN
     if (user.pin !== pin) {
       return res.status(401).json({ error: 'PIN incorrecto' })
     }
 
+    // Check if user can access this location
     if (user.role !== 'admin' && user.location_id !== parseInt(location_id)) {
       return res.status(403).json({ error: 'No tienes acceso a esta ubicación' })
     }
 
+    // Generate session token
     const token = crypto.randomBytes(32).toString('hex')
 
+    // Create session
     await query(
       `INSERT INTO sessions (user_id, location_id, token) VALUES ($1, $2, $3)`,
       [user_id, location_id, token]
     )
 
+    // Get location info
     const locationResult = await query(
       'SELECT * FROM locations WHERE id = $1',
       [location_id]
@@ -189,8 +188,8 @@ router.get('/auth/me', verifyToken, async (req, res) => {
   res.json({
     ok: true,
     user: req.user,
-    location: req.location,
     session: {
+      location_id: req.session.location_id,
       logged_in_at: req.session.logged_in_at,
     },
   })

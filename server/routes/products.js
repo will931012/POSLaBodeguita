@@ -15,6 +15,11 @@ router.get('/', async (req, res) => {
     let params = []
     let paramIndex = 1
 
+    // Filter by location (products with location_id matching current location OR null for shared products)
+    whereClauses.push(`(location_id = $${paramIndex} OR location_id IS NULL)`)
+    params.push(req.location.id)
+    paramIndex++
+
     if (q) {
       whereClauses.push(`(name ILIKE $${paramIndex} OR upc ILIKE $${paramIndex})`)
       params.push(`%${q}%`)
@@ -50,7 +55,10 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid ID' })
     }
 
-    const result = await query('SELECT * FROM products WHERE id = $1', [id])
+    const result = await query(
+      'SELECT * FROM products WHERE id = $1 AND (location_id = $2 OR location_id IS NULL)',
+      [id, req.location.id]
+    )
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' })
@@ -65,15 +73,18 @@ router.get('/:id', async (req, res) => {
 // POST /api/products
 router.post('/', async (req, res) => {
   try {
-    const { upc, name, price = 0, qty = 0 } = req.body
+    const { upc, name, price = 0, qty = 0, shared = false } = req.body
 
     if (!name || String(name).trim() === '') {
       return res.status(400).json({ error: 'Name is required' })
     }
 
+    // If shared, location_id is NULL; otherwise use current location
+    const locationId = shared ? null : req.location.id
+
     const result = await query(
-      `INSERT INTO products (upc, name, price, qty) VALUES ($1, $2, $3, $4) RETURNING *`,
-      [upc || null, String(name).trim(), Number(price), Number(qty)]
+      `INSERT INTO products (upc, name, price, qty, location_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [upc || null, String(name).trim(), Number(price), Number(qty), locationId]
     )
 
     res.status(201).json(result.rows[0])
@@ -91,7 +102,11 @@ router.put('/:id', async (req, res) => {
     const id = parseInt(req.params.id)
     const { upc, name, price, qty } = req.body
 
-    const checkResult = await query('SELECT * FROM products WHERE id = $1', [id])
+    const checkResult = await query(
+      'SELECT * FROM products WHERE id = $1 AND (location_id = $2 OR location_id IS NULL)',
+      [id, req.location.id]
+    )
+    
     if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' })
     }
@@ -122,6 +137,17 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id)
+    
+    // Check if product belongs to this location or is shared
+    const checkResult = await query(
+      'SELECT * FROM products WHERE id = $1 AND (location_id = $2 OR location_id IS NULL)',
+      [id, req.location.id]
+    )
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' })
+    }
+
     const result = await query('DELETE FROM products WHERE id = $1', [id])
     res.json({ deleted: result.rowCount })
   } catch (error) {

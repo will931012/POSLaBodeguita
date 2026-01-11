@@ -1,32 +1,107 @@
-import { Routes, Route } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import Layout from '@components/Layout'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { Toaster } from 'sonner'
 
-// Pages
-import Dashboard from '@pages/Dashboard'
-import Sales from '@pages/Sales'
-import Inventory from '@pages/Inventory'
-import Receipts from '@pages/Receipts'
-import CloseCash from '@pages/CloseCash'
-import ProductLabel from '@pages/ProductLabel'
-import NotFound from '@pages/NotFound'
+// Auth Pages
+import LocationSelector from './pages/LocationSelector'
+import Login from './pages/Login'
 
-function App() {
+// Protected Pages
+import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
+import Dashboard from './pages/Dashboard'
+import Sales from './pages/Sales'
+import Inventory from './pages/Inventory'
+import Receipts from './pages/Receipts'
+import CloseCash from './pages/CloseCash'
+import ProductLabel from './pages/ProductLabel'
+import NotFound from './pages/NotFound'
+
+function AppRoutes() {
+  const { isAuthenticated } = useAuth()
+
   return (
-    <AnimatePresence mode="wait">
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="sales" element={<Sales />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="receipts" element={<Receipts />} />
-          <Route path="close" element={<CloseCash />} />
-          <Route path="label/:id" element={<ProductLabel />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
-    </AnimatePresence>
+    <Routes>
+      {/* Public Routes */}
+      <Route 
+        path="/" 
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LocationSelector />} 
+      />
+      <Route 
+        path="/login" 
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} 
+      />
+
+      {/* Protected Routes */}
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Routes>
+                {/* Dashboard - All roles */}
+                <Route path="/dashboard" element={<Dashboard />} />
+                
+                {/* Sales - All roles */}
+                <Route path="/sales" element={<Sales />} />
+                
+                {/* Inventory - Manager and Admin only */}
+                <Route 
+                  path="/inventory" 
+                  element={
+                    <ProtectedRoute roles={['admin', 'manager']}>
+                      <Inventory />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Receipts - All roles */}
+                <Route path="/receipts" element={<Receipts />} />
+                
+                {/* Close Cash - Manager and Admin only */}
+                <Route 
+                  path="/close" 
+                  element={
+                    <ProtectedRoute roles={['admin', 'manager']}>
+                      <CloseCash />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Product Label - Manager and Admin only */}
+                <Route 
+                  path="/label/:id" 
+                  element={
+                    <ProtectedRoute roles={['admin', 'manager']}>
+                      <ProductLabel />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+        <Toaster 
+          position="top-right" 
+          richColors 
+          closeButton
+          expand={false}
+          duration={4000}
+        />
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}
