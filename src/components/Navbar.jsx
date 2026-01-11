@@ -43,7 +43,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-gray-900 shadow-xl">
+    <nav className="sticky top-0 z-50 bg-gradient-to-r from-primary-700 to-primary-600 shadow-xl">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
 
