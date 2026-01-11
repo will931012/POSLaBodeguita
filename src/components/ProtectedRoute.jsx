@@ -1,9 +1,10 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 
 export default function ProtectedRoute({ children, roles = [] }) {
   const { user, loading, isAuthenticated, hasRole } = useAuth()
 
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -12,11 +13,12 @@ export default function ProtectedRoute({ children, roles = [] }) {
     )
   }
 
+  // Not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/" replace />
   }
 
-  // Check roles if specified
+  // Role-based access
   if (roles.length > 0 && !hasRole(roles)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -28,13 +30,21 @@ export default function ProtectedRoute({ children, roles = [] }) {
           <p className="text-gray-600 mb-6">
             No tienes permisos para acceder a esta página.
           </p>
-          <p className="text-sm text-gray-500">
-            Tu rol: <span className="font-semibold capitalize">{user.role}</span>
-          </p>
+          {user?.role && (
+            <p className="text-sm text-gray-500">
+              Tu rol:{' '}
+              <span className="font-semibold capitalize">
+                {user.role}
+              </span>
+            </p>
+          )}
         </div>
       </div>
     )
   }
 
-  return children
+  // ✅ IMPORTANT FIX:
+  // If children exist → render them
+  // Otherwise → render nested routes via Outlet
+  return children ? children : <Outlet />
 }
