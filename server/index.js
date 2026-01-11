@@ -42,14 +42,21 @@ if (process.env.ENABLE_RATE_LIMITING === 'true') {
 // Auth routes (PUBLIC - no verifyToken needed)
 app.use('/api', authRouter)
 
+// Import route modules
+const productsRouter = require('./routes/products')
+const salesRouter = require('./routes/sales')
+const receiptsRouter = require('./routes/receipts')
+const reportsRouter = require('./routes/reports')
+const importRouter = require('./routes/import')
+
 // Protected routes (require authentication)
-app.use('/api/products', verifyToken, require('./routes/products'))
-app.use('/api/sales', verifyToken, require('./routes/sales'))
-app.use('/api/receipts', verifyToken, require('./routes/receipts'))
-app.use('/report', verifyToken, require('./routes/reports'))
+app.use('/api/products', verifyToken, productsRouter)
+app.use('/api/sales', verifyToken, salesRouter)
+app.use('/api/receipts', verifyToken, receiptsRouter)
+app.use('/report', verifyToken, reportsRouter)
 
 // Admin/Manager only routes
-app.use('/api/import', verifyToken, requireRole(['admin', 'manager']), require('./routes/import'))
+app.use('/api/import', verifyToken, requireRole(['admin', 'manager']), importRouter)
 
 // Health check (PUBLIC)
 app.get('/api/health', (req, res) => {
