@@ -18,20 +18,39 @@ export default function LocationSelector() {
 
   const loadLocations = async () => {
     try {
+      setLoading(true)
+      console.log('🔍 Fetching locations from:', `${API}/api/locations`)
+      
       const res = await fetch(`${API}/api/locations`)
+      
+      console.log('📡 Response status:', res.status)
+      console.log('📡 Response ok:', res.ok)
+      
       if (!res.ok) throw new Error('Failed to load locations')
       
       const data = await res.json()
-      setLocations(data.filter(loc => loc.active))
+      console.log('📦 Locations data:', data)
+      
+      // El backend ya devuelve solo ubicaciones activas
+      // Solo verificamos que sea un array
+      setLocations(Array.isArray(data) ? data : [])
+      
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('✅ Loaded', data.length, 'locations')
+      } else {
+        console.warn('⚠️ No locations received')
+      }
     } catch (error) {
-      console.error('Load locations error:', error)
+      console.error('❌ Load locations error:', error)
       toast.error('Error al cargar ubicaciones')
+      setLocations([])
     } finally {
       setLoading(false)
     }
   }
 
   const selectLocation = (location) => {
+    console.log('📍 Selected location:', location.name)
     // Save selected location temporarily
     sessionStorage.setItem('selected_location', JSON.stringify(location))
     navigate('/login')
@@ -66,65 +85,73 @@ export default function LocationSelector() {
         </motion.div>
 
         {/* Location Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {locations.map((location, index) => (
-            <motion.div
-              key={location.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <button
-                onClick={() => selectLocation(location)}
-                className="w-full bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all p-8 border-2 border-transparent hover:border-primary-500 group"
+        {locations.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {locations.map((location, index) => (
+              <motion.div
+                key={location.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                {/* Location Icon */}
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <MapPin className="w-8 h-8 text-white" />
-                </div>
+                <button
+                  onClick={() => selectLocation(location)}
+                  className="w-full bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all p-8 border-2 border-transparent hover:border-primary-500 group"
+                >
+                  {/* Location Icon */}
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <MapPin className="w-8 h-8 text-white" />
+                  </div>
 
-                {/* Location Name */}
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {location.name}
-                </h2>
+                  {/* Location Name */}
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    {location.name}
+                  </h2>
 
-                {/* Location Address */}
-                {location.address && (
-                  <p className="text-gray-600 mb-4">
-                    {location.address}
-                  </p>
-                )}
+                  {/* Location Address */}
+                  {location.address && (
+                    <p className="text-gray-600 mb-4">
+                      {location.address}
+                    </p>
+                  )}
 
-                {/* Phone */}
-                {location.phone && (
-                  <p className="text-sm text-gray-500 mb-4">
-                    📞 {location.phone}
-                  </p>
-                )}
+                  {/* Phone */}
+                  {location.phone && (
+                    <p className="text-sm text-gray-500 mb-4">
+                      📞 {location.phone}
+                    </p>
+                  )}
 
-                {/* Continue Button */}
-                <div className="flex items-center justify-center gap-2 text-primary-600 font-semibold group-hover:gap-4 transition-all">
-                  <span>Continuar</span>
-                  <ArrowRight className="w-5 h-5" />
-                </div>
-              </button>
-            </motion.div>
-          ))}
-        </div>
+                  {/* Continue Button */}
+                  <div className="flex items-center justify-center gap-2 text-primary-600 font-semibold group-hover:gap-4 transition-all">
+                    <span>Continuar</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </div>
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         {/* No Locations */}
-        {locations.length === 0 && (
+        {locations.length === 0 && !loading && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
             <Store className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-lg mb-2">
               No hay ubicaciones disponibles
             </p>
+            <button
+              onClick={loadLocations}
+              className="text-primary-600 hover:text-primary-700 font-semibold"
+            >
+              Reintentar
+            </button>
           </motion.div>
         )}
 
