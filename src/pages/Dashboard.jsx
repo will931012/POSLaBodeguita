@@ -31,9 +31,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!token) return   // ✅ FIX CLAVE (NO se borra nada)
     loadDashboardData()
     loadVerse()
-  }, [])
+  }, [token])            // ✅ FIX CLAVE
 
   const loadDashboardData = async () => {
     try {
