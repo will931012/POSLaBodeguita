@@ -32,14 +32,31 @@ export default function Login() {
 
   const loadUsers = async (locationId) => {
     try {
+      console.log('🔍 Fetching users for location:', locationId)
+      
       const res = await fetch(`${API}/api/users?location_id=${locationId}`)
+      
+      console.log('📡 Response status:', res.status)
+      console.log('📡 Response ok:', res.ok)
+      
       if (!res.ok) throw new Error('Failed to load users')
       
       const data = await res.json()
-      setUsers(data.filter(u => u.active))
+      console.log('📦 Users data:', data)
+      
+      // El backend ya devuelve solo usuarios activos
+      // Solo verificamos que sea un array
+      setUsers(Array.isArray(data) ? data : [])
+      
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('✅ Loaded', data.length, 'users')
+      } else {
+        console.warn('⚠️ No users received for location', locationId)
+      }
     } catch (error) {
-      console.error('Load users error:', error)
+      console.error('❌ Load users error:', error)
       toast.error('Error al cargar usuarios')
+      setUsers([])
     }
   }
 
@@ -66,6 +83,12 @@ export default function Login() {
 
     try {
       setLoading(true)
+      console.log('🔐 Attempting login:', {
+        user_id: selectedUser.id,
+        user_name: selectedUser.name,
+        location_id: location.id,
+        pin_length: pin.length
+      })
 
       const res = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
@@ -83,6 +106,7 @@ export default function Login() {
       }
 
       const data = await res.json()
+      console.log('✅ Login successful:', data)
 
       // Login via context
       await login(location, data.user, data.token)
@@ -90,7 +114,7 @@ export default function Login() {
       toast.success(`¡Bienvenido, ${data.user.name}!`)
       navigate('/dashboard')
     } catch (error) {
-      console.error('Login error:', error)
+      console.error('❌ Login error:', error)
       toast.error(error.message || 'Error al iniciar sesión')
       setPin('')
     } finally {
@@ -111,7 +135,7 @@ export default function Login() {
   useEffect(() => {
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [pin])
+  }, [pin, selectedUser])
 
   if (!location) {
     return null
@@ -178,8 +202,16 @@ export default function Login() {
             ))}
 
             {users.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No hay usuarios disponibles para esta ubicación
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-2">
+                  No hay usuarios disponibles para esta ubicación
+                </p>
+                <button
+                  onClick={() => loadUsers(location.id)}
+                  className="text-primary-600 hover:text-primary-700 font-semibold text-sm"
+                >
+                  Reintentar
+                </button>
               </div>
             )}
           </motion.div>
@@ -237,20 +269,23 @@ export default function Login() {
                   <button
                     key={digit}
                     onClick={() => handlePinInput(digit.toString())}
-                    className="h-14 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold text-lg transition-colors"
+                    disabled={loading}
+                    className="h-14 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 rounded-xl font-semibold text-lg transition-colors"
                   >
                     {digit}
                   </button>
                 ))}
                 <button
                   onClick={handlePinDelete}
-                  className="h-14 bg-red-100 hover:bg-red-200 rounded-xl font-semibold transition-colors text-red-700"
+                  disabled={loading}
+                  className="h-14 bg-red-100 hover:bg-red-200 disabled:opacity-50 rounded-xl font-semibold transition-colors text-red-700"
                 >
                   ←
                 </button>
                 <button
                   onClick={() => handlePinInput('0')}
-                  className="h-14 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold text-lg transition-colors"
+                  disabled={loading}
+                  className="h-14 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 rounded-xl font-semibold text-lg transition-colors"
                 >
                   0
                 </button>
