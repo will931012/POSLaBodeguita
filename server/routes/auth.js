@@ -9,29 +9,20 @@ const router = express.Router()
 // ============================================
 async function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No token provided' })
   }
 
-  const token = authHeader.slice(7)
+  const token = authHeader.substring(7)
 
   try {
     const result = await query(
-      `
-      SELECT 
-        s.*,
-        u.id   AS user_id,
-        u.name,
-        u.role,
-        u.location_id AS user_location_id,
-        l.id   AS location_id,
-        l.name AS location_name
-      FROM sessions s
-      JOIN users u     ON u.id = s.user_id
-      JOIN locations l ON l.id = s.location_id
-      WHERE s.token = $1 AND s.active = true
-      `,
+      `SELECT s.*, u.id as user_id, u.name, u.role, u.location_id as user_location_id, 
+              l.id as location_id, l.name as location_name
+       FROM sessions s
+       JOIN users u ON u.id = s.user_id
+       JOIN locations l ON l.id = s.location_id
+       WHERE s.token = $1 AND s.active = true`,
       [token]
     )
 
@@ -39,39 +30,35 @@ async function verifyToken(req, res, next) {
       return res.status(401).json({ error: 'Invalid or expired token' })
     }
 
-    const row = result.rows[0]
-
-    req.session = row
+    req.session = result.rows[0]
     req.user = {
-      id: row.user_id,
-      name: row.name,
-      role: row.role,
-      location_id: row.user_location_id,
+      id: result.rows[0].user_id,
+      name: result.rows[0].name,
+      role: result.rows[0].role,
+      user_location_id: result.rows[0].user_location_id,
     }
     req.location = {
-      id: row.location_id,
-      name: row.location_name,
+      id: result.rows[0].location_id,
+      name: result.rows[0].location_name,
     }
-
     next()
-  } catch (err) {
-    console.error('Token verification error:', err)
+  } catch (error) {
+    console.error('Token verification error:', error)
     res.status(500).json({ error: 'Token verification failed' })
   }
 }
 
 // ============================================
-// MIDDLEWARE: Require Role
+// MIDDLEWARE: Check Role
 // ============================================
-function requireRole(roles = []) {
-  const allowed = Array.isArray(roles) ? roles : [roles]
-
+function requireRole(roles) {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Not authenticated' })
     }
 
-    if (!allowed.includes(req.user.role)) {
+    const userRoles = Array.isArray(roles) ? roles : [roles]
+    if (!userRoles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Insufficient permissions' })
     }
 
@@ -80,66 +67,60 @@ function requireRole(roles = []) {
 }
 
 // ============================================
-// PUBLIC ROUTES
+// GET /api/locations - List active locations
 // ============================================
-
-// GET /api/locations
-router.get('/locations', async (_req, res) => {
+router.get('/locations', async (req, res) => {
   try {
     const result = await query(
-      `SELECT id, name, slug, address, phone
-       FROM locations
-       WHERE active = true
-       ORDER BY name`
+      'SELECT id, name, slug, address, phone FROM locations WHERE active = true ORDER BY name'
     )
     res.json(result.rows)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
   }
 })
 
-// GET /api/users
+// ============================================
+// GET /api/users - List users for location
+// ============================================
 router.get('/users', async (req, res) => {
   try {
-    const { location_id } = req.query
+    const locationId = req.query.location_id
 
-    const result = location_id
-      ? await query(
-          `
-          SELECT id, name, role
-          FROM users
-          WHERE active = true
-            AND (location_id = $1 OR location_id IS NULL)
-          ORDER BY role, name
-          `,
-          [location_id]
-        )
-      : await query(
-          `
-          SELECT id, name, role, location_id
-          FROM users
-          WHERE active = true
-          ORDER BY role, name
-          `
-        )
+    let result
+    if (locationId) {
+      result = await query(
+        `SELECT id, name, role FROM users 
+         WHERE active = true AND (location_id = $1 OR location_id IS NULL)
+         ORDER BY 
+           CASE role 
+             WHEN 'admin' THEN 1 
+             WHEN 'manager' THEN 2 
+             WHEN 'cashier' THEN 3 
+           END, name`,
+        [locationId]
+      )
+    } else {
+      result = await query(
+        'SELECT id, name, role, location_id FROM users WHERE active = true ORDER BY role, name'
+      )
+    }
 
     res.json(result.rows)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
   }
 })
 
 // ============================================
-// AUTH ROUTES
+// POST /api/auth/login - Login with PIN
 // ============================================
-
-// POST /api/auth/login
 router.post('/auth/login', async (req, res) => {
   try {
     const { user_id, pin, location_id } = req.body
 
     const userResult = await query(
-      `SELECT * FROM users WHERE id = $1 AND active = true`,
+      'SELECT * FROM users WHERE id = $1 AND active = true',
       [user_id]
     )
 
@@ -153,20 +134,19 @@ router.post('/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'PIN incorrecto' })
     }
 
-    if (user.role !== 'admin' && user.location_id !== Number(location_id)) {
+    if (user.role !== 'admin' && user.location_id !== parseInt(location_id)) {
       return res.status(403).json({ error: 'No tienes acceso a esta ubicación' })
     }
 
     const token = crypto.randomBytes(32).toString('hex')
 
     await query(
-      `INSERT INTO sessions (user_id, location_id, token)
-       VALUES ($1, $2, $3)`,
+      `INSERT INTO sessions (user_id, location_id, token) VALUES ($1, $2, $3)`,
       [user_id, location_id, token]
     )
 
     const locationResult = await query(
-      `SELECT * FROM locations WHERE id = $1`,
+      'SELECT * FROM locations WHERE id = $1',
       [location_id]
     )
 
@@ -180,32 +160,32 @@ router.post('/auth/login', async (req, res) => {
       },
       location: locationResult.rows[0],
     })
-  } catch (err) {
-    console.error('Login error:', err)
+  } catch (error) {
+    console.error('Login error:', error)
     res.status(500).json({ error: 'Error al iniciar sesión' })
   }
 })
 
-// POST /api/auth/logout
+// ============================================
+// POST /api/auth/logout - Logout
+// ============================================
 router.post('/auth/logout', verifyToken, async (req, res) => {
   try {
     await query(
-      `
-      UPDATE sessions
-      SET active = false, logged_out_at = CURRENT_TIMESTAMP
-      WHERE token = $1
-      `,
-      [req.headers.authorization.slice(7)]
+      `UPDATE sessions SET active = false, logged_out_at = CURRENT_TIMESTAMP WHERE token = $1`,
+      [req.headers.authorization.substring(7)]
     )
 
     res.json({ ok: true })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
   }
 })
 
-// GET /api/auth/me
-router.get('/auth/me', verifyToken, (req, res) => {
+// ============================================
+// GET /api/auth/me - Get current user
+// ============================================
+router.get('/auth/me', verifyToken, async (req, res) => {
   res.json({
     ok: true,
     user: req.user,
@@ -216,11 +196,4 @@ router.get('/auth/me', verifyToken, (req, res) => {
   })
 })
 
-// ============================================
-// EXPORTS (🔥 CLAVE 🔥)
-// ============================================
-module.exports = {
-  authRouter: router,
-  verifyToken,
-  requireRole,
-}
+module.exports = { router, verifyToken, requireRole }

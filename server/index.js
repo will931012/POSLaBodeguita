@@ -5,7 +5,6 @@ const helmet = require('helmet')
 const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 const { initDatabase } = require('./utils/init-db')
-const { router: authRouter, verifyToken, requireRole } = require('./routes/auth')
 
 const app = express()
 
@@ -36,29 +35,60 @@ if (process.env.ENABLE_RATE_LIMITING === 'true') {
 }
 
 // ============================================
+// IMPORT ROUTES WITH ERROR HANDLING
+// ============================================
+let authRouter, verifyToken, requireRole
+
+try {
+  const authModule = require('./routes/auth')
+  authRouter = authModule.router
+  verifyToken = authModule.verifyToken
+  requireRole = authModule.requireRole
+  
+  if (!authRouter || !verifyToken || !requireRole) {
+    throw new Error('auth.js no exporta router, verifyToken o requireRole correctamente')
+  }
+  console.log('✅ Auth module loaded successfully')
+} catch (error) {
+  console.error('❌ CRITICAL ERROR: No se pudo cargar routes/auth.js')
+  console.error('   Error:', error.message)
+  console.error('   Asegúrate de que el archivo routes/auth.js existe y exporta { router, verifyToken, requireRole }')
+  process.exit(1)
+}
+
+let productsRouter, salesRouter, receiptsRouter, reportsRouter, importRouter
+
+try {
+  productsRouter = require('./routes/products')
+  salesRouter = require('./routes/sales')
+  receiptsRouter = require('./routes/receipts')
+  reportsRouter = require('./routes/reports')
+  importRouter = require('./routes/import')
+  
+  console.log('✅ All route modules loaded successfully')
+} catch (error) {
+  console.error('❌ ERROR loading route modules:', error.message)
+  console.error('   Verifica que todos los archivos de rutas existen en routes/')
+  process.exit(1)
+}
+
+// ============================================
 // ROUTES
 // ============================================
 
-// Auth routes (PUBLIC - no verifyToken needed)
+// Auth routes (PUBLIC)
 app.use('/api', authRouter)
 
-// Import route modules
-const productsRouter = require('./routes/products')
-const salesRouter = require('./routes/sales')
-const receiptsRouter = require('./routes/receipts')
-const reportsRouter = require('./routes/reports')
-const importRouter = require('./routes/import')
-
-// Protected routes (require authentication)
+// Protected routes
 app.use('/api/products', verifyToken, productsRouter)
 app.use('/api/sales', verifyToken, salesRouter)
 app.use('/api/receipts', verifyToken, receiptsRouter)
 app.use('/report', verifyToken, reportsRouter)
 
-// Admin/Manager only routes
+// Admin/Manager only
 app.use('/api/import', verifyToken, requireRole(['admin', 'manager']), importRouter)
 
-// Health check (PUBLIC)
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
@@ -68,7 +98,7 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-// Root (PUBLIC)
+// Root
 app.get('/', (req, res) => {
   res.json({
     name: 'POS Multi-Store API',
