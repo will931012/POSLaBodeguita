@@ -6,10 +6,12 @@ import {
   Package, 
   Receipt,
   TrendingUp,
+  ArrowRight
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import Card, { StatCard } from '@components/Card'
+import Button from '@components/Button'
 import { useAuth } from '@/context/AuthContext'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -38,7 +40,7 @@ export default function Dashboard() {
       setLoading(true)
       const res = await fetch(`${API}/api/sales/today`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`
         }
       })
       if (!res.ok) throw new Error('Failed to load sales')

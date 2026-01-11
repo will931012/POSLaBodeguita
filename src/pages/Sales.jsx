@@ -9,6 +9,7 @@ import {
   CreditCard,
   DollarSign,
   Check,
+  Scan,
 } from 'lucide-react'
 import Button from '@components/Button'
 import Card from '@components/Card'
@@ -41,9 +42,75 @@ export default function Sales() {
   const [tempForm, setTempForm] = useState({ name: '', price: '', qty: '1' })
   
   const searchTimerRef = useRef(null)
+  const searchInputRef = useRef(null)
 
   // ============================================
-  // SEARCH
+  // BARCODE SCANNER - BÚSQUEDA EXACTA POR UPC
+  // ============================================
+  const searchProductByUPC = async (upc) => {
+    try {
+      console.log('🔍 Buscando producto por UPC:', upc)
+      
+      const res = await fetch(`${API}/api/products?q=${encodeURIComponent(upc)}&limit=50`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!res.ok) throw new Error('Search failed')
+      
+      const data = await res.json()
+      const products = data.rows || []
+      
+      // Buscar coincidencia exacta por UPC
+      const exactMatch = products.find(p => p.upc === upc)
+      
+      if (exactMatch) {
+        console.log('✅ Producto encontrado:', exactMatch.name)
+        addToCart(exactMatch)
+        return true
+      } else {
+        console.log('❌ No se encontró producto con UPC:', upc)
+        return false
+      }
+    } catch (error) {
+      console.error('Error buscando por UPC:', error)
+      return false
+    }
+  }
+
+  // ============================================
+  // HANDLE ENTER KEY (SCANNER)
+  // ============================================
+  const handleSearchKeyDown = async (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      e.preventDefault()
+      
+      // Intentar agregar por UPC primero
+      const found = await searchProductByUPC(searchQuery.trim())
+      
+      if (found) {
+        // Limpiar input y mantener foco
+        setSearchQuery('')
+        setSearchResults([])
+        
+        // Mantener el foco en el input para seguir escaneando
+        if (searchInputRef.current) {
+          searchInputRef.current.focus()
+        }
+      } else {
+        // Si no se encuentra por UPC, mostrar error
+        toast.error(`Producto no encontrado: ${searchQuery}`)
+        
+        // Opcional: mantener el query para búsqueda manual
+        // O limpiarlo si prefieres
+        // setSearchQuery('')
+      }
+    }
+  }
+
+  // ============================================
+  // SEARCH (PARA BÚSQUEDA MANUAL)
   // ============================================
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
@@ -389,13 +456,26 @@ export default function Sales() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card>
+            <div className="flex items-center gap-2 mb-3">
+              <Scan className="w-5 h-5 text-primary-600" />
+              <span className="text-sm font-semibold text-gray-600 uppercase">
+                Escanea o busca productos
+              </span>
+            </div>
+            
             <Input
+              ref={searchInputRef}
               icon={Search}
-              placeholder="Buscar producto por nombre o código..."
+              placeholder="Escanea código de barras o busca por nombre..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               autoFocus
             />
+
+            <div className="mt-2 text-xs text-gray-500">
+              💡 Tip: Escanea el código de barras y presiona Enter para agregar automáticamente
+            </div>
 
             <AnimatePresence>
               {searchResults.length > 0 && (
@@ -416,6 +496,7 @@ export default function Sales() {
                       <div>
                         <div className="font-semibold">{product.name}</div>
                         <div className="text-sm text-gray-600">
+                          {product.upc && <span className="font-mono">UPC: {product.upc} • </span>}
                           Stock: {toNumber(product.qty)} • ${toNumber(product.price).toFixed(2)}
                         </div>
                       </div>
