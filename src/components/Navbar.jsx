@@ -19,7 +19,10 @@ import Button from '@components/Button'
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const location = useLocation()
-  const { user, location: userLocation, logout, hasRole } = useAuth()
+  const { user, location: userLocation, logout, hasRole, loading } = useAuth()
+
+  // ⛑️ GUARD: evita render mientras Auth se hidrata
+  if (loading || !user) return null
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [] },
@@ -29,8 +32,8 @@ export default function Navbar() {
     { path: '/close', label: 'Cierre', icon: DollarSign, roles: ['admin', 'manager'] },
   ]
 
-  const visibleItems = navItems.filter(item => 
-    item.roles.length === 0 || hasRole(item.roles)
+  const visibleItems = navItems.filter(
+    item => item.roles.length === 0 || hasRole(item.roles)
   )
 
   const handleLogout = async () => {
@@ -40,9 +43,10 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-gradient-dark shadow-xl">
+    <nav className="sticky top-0 z-50 bg-gray-900 shadow-xl">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
+
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-3 group">
             <motion.div
@@ -68,8 +72,12 @@ export default function Navbar() {
             <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl">
               <User className="w-4 h-4 text-white/70" />
               <div>
-                <div className="text-white/90 text-sm font-medium">{user?.name}</div>
-                <div className="text-white/60 text-xs capitalize">{user?.role}</div>
+                <div className="text-white/90 text-sm font-medium">
+                  {user.name}
+                </div>
+                <div className="text-white/60 text-xs capitalize">
+                  {user.role}
+                </div>
               </div>
             </div>
           </div>
@@ -130,13 +138,12 @@ export default function Navbar() {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden py-4 space-y-2"
           >
-            {/* User Info - Mobile */}
             <div className="px-4 py-3 bg-white/10 rounded-xl mb-4">
               <div className="flex items-center gap-3 mb-2">
                 <User className="w-5 h-5 text-white/70" />
                 <div>
-                  <div className="text-white font-medium">{user?.name}</div>
-                  <div className="text-white/60 text-sm capitalize">{user?.role}</div>
+                  <div className="text-white font-medium">{user.name}</div>
+                  <div className="text-white/60 text-sm capitalize">{user.role}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-white/70 text-sm">
