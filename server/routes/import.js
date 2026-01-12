@@ -17,7 +17,8 @@ router.post('/products', upload.single('file'), async (req, res) => {
     }
 
     const dryRun = req.query.dryRun === '1'
-    const locationId = req.location.id
+    // TODOS los productos importados son compartidos (location_id = NULL)
+    const locationId = null
 
     const results = []
     const errors = []

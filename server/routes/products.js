@@ -52,8 +52,11 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { upc, name, price, qty, shared } = req.body
-    const locationId = shared ? null : req.location.id
-
+    
+    // TODOS los productos son compartidos por defecto
+    // location_id = NULL significa que todas las ubicaciones lo ven
+    const locationId = null
+    
     const result = await query(
       `INSERT INTO products (upc, name, price, qty, location_id) 
        VALUES ($1, $2, $3, $4, $5) 
