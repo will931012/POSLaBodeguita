@@ -10,6 +10,7 @@ import {
   DollarSign,
   Check,
   Scan,
+  Save,
 } from 'lucide-react'
 import Button from '@components/Button'
 import Card from '@components/Card'
@@ -18,6 +19,7 @@ import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const CART_STORAGE_KEY = 'pos_active_sale'
 
 const toNumber = (val) => {
   if (val === null || val === undefined) return 0
@@ -45,6 +47,73 @@ export default function Sales() {
   const searchInputRef = useRef(null)
 
   // ============================================
+  // PERSISTENCIA - CARGAR CARRITO AL MONTAR
+  // ============================================
+  useEffect(() => {
+    loadSavedCart()
+  }, [])
+
+  const loadSavedCart = () => {
+    try {
+      const saved = localStorage.getItem(CART_STORAGE_KEY)
+      if (saved) {
+        const data = JSON.parse(saved)
+        
+        // Verificar que no sea muy antiguo (más de 24 horas)
+        const savedTime = data.timestamp || 0
+        const now = Date.now()
+        const hoursSince = (now - savedTime) / (1000 * 60 * 60)
+        
+        if (hoursSince < 24) {
+          setMode(data.mode || 'idle')
+          setCart(data.cart || {})
+          setProducts(data.products || [])
+          setTempProducts(data.tempProducts || [])
+          setPaymentMethod(data.paymentMethod || 'card')
+          setCashReceived(data.cashReceived || '')
+          
+          console.log('🔄 Carrito restaurado:', Object.keys(data.cart || {}).length, 'productos')
+          
+          if (Object.keys(data.cart || {}).length > 0) {
+            toast.success('Venta activa restaurada')
+          }
+        } else {
+          // Limpiar carrito antiguo
+          localStorage.removeItem(CART_STORAGE_KEY)
+          console.log('🗑️ Carrito antiguo eliminado')
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved cart:', error)
+      localStorage.removeItem(CART_STORAGE_KEY)
+    }
+  }
+
+  // ============================================
+  // PERSISTENCIA - GUARDAR CARRITO AUTOMÁTICAMENTE
+  // ============================================
+  useEffect(() => {
+    // Solo guardar si hay algo en el carrito
+    if (Object.keys(cart).length > 0 || mode === 'active') {
+      const dataToSave = {
+        mode,
+        cart,
+        products,
+        tempProducts,
+        paymentMethod,
+        cashReceived,
+        timestamp: Date.now(),
+      }
+      
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(dataToSave))
+      console.log('💾 Carrito guardado automáticamente')
+    } else if (mode === 'idle') {
+      // Si el modo es idle y no hay productos, limpiar storage
+      localStorage.removeItem(CART_STORAGE_KEY)
+    }
+  }, [mode, cart, products, tempProducts, paymentMethod, cashReceived])
+
+  // ============================================
   // BARCODE SCANNER - BÚSQUEDA EXACTA POR UPC
   // ============================================
   const searchProductByUPC = async (upc) => {
@@ -60,10 +129,10 @@ export default function Sales() {
       if (!res.ok) throw new Error('Search failed')
       
       const data = await res.json()
-      const products = data.rows || []
+      const allProducts = data.rows || []
       
       // Buscar coincidencia exacta por UPC
-      const exactMatch = products.find(p => p.upc === upc)
+      const exactMatch = allProducts.find(p => p.upc === upc)
       
       if (exactMatch) {
         console.log('✅ Producto encontrado:', exactMatch.name)
@@ -101,10 +170,6 @@ export default function Sales() {
       } else {
         // Si no se encuentra por UPC, mostrar error
         toast.error(`Producto no encontrado: ${searchQuery}`)
-        
-        // Opcional: mantener el query para búsqueda manual
-        // O limpiarlo si prefieres
-        // setSearchQuery('')
       }
     }
   }
@@ -211,6 +276,7 @@ export default function Sales() {
     setTempProducts([])
     setPaymentMethod('card')
     setCashReceived('')
+    localStorage.removeItem(CART_STORAGE_KEY)
     toast.info('Carrito vaciado')
   }
 
@@ -443,11 +509,22 @@ export default function Sales() {
   }
 
   const allProducts = [...products, ...tempProducts]
+  const itemCount = Object.keys(cart).length
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold text-gradient">Nueva Venta</h1>
+        <div>
+          <h1 className="text-4xl font-bold text-gradient">Nueva Venta</h1>
+          {itemCount > 0 && (
+            <div className="flex items-center gap-2 mt-2">
+              <Save className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-600 font-semibold">
+                Venta guardada automáticamente ({itemCount} productos)
+              </span>
+            </div>
+          )}
+        </div>
         <Button variant="outline" onClick={() => { clearCart(); setMode('idle') }}>
           Cancelar
         </Button>
