@@ -218,13 +218,7 @@ export default function Sales() {
     const currentQty = cart[productId] || 0
     const newQty = currentQty + 1
 
-    if (!isTemp) {
-      const availableQty = toNumber(product.qty)
-      if (newQty > availableQty) {
-        toast.error(`Solo hay ${availableQty} unidades disponibles`)
-        return
-      }
-    }
+    // Sin límite de stock - permite inventario negativo
 
     setCart({ ...cart, [productId]: newQty })
     
@@ -248,13 +242,7 @@ export default function Sales() {
       return
     }
 
-    if (product && !product.temp) {
-      const availableQty = toNumber(product.qty)
-      if (newQty > availableQty) {
-        toast.error(`Solo hay ${availableQty} unidades`)
-        return
-      }
-    }
+    // Sin límite de stock - permite inventario negativo
 
     setCart({ ...cart, [productId]: newQty })
   }
