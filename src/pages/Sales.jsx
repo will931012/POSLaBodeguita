@@ -11,6 +11,7 @@ import {
   Check,
   Scan,
   Save,
+  Zap,
 } from 'lucide-react'
 import Button from '@components/Button'
 import Card from '@components/Card'
@@ -20,6 +21,9 @@ import { toast } from 'sonner'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const CART_STORAGE_KEY = 'pos_active_sale'
+
+// Precios rápidos para el pad
+const QUICK_PRICES = [0.10, 0.25, 0.50, 0.75, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 const toNumber = (val) => {
   if (val === null || val === undefined) return 0
@@ -59,7 +63,6 @@ export default function Sales() {
       if (saved) {
         const data = JSON.parse(saved)
         
-        // Verificar que no sea muy antiguo (más de 24 horas)
         const savedTime = data.timestamp || 0
         const now = Date.now()
         const hoursSince = (now - savedTime) / (1000 * 60 * 60)
@@ -78,7 +81,6 @@ export default function Sales() {
             toast.success('Venta activa restaurada')
           }
         } else {
-          // Limpiar carrito antiguo
           localStorage.removeItem(CART_STORAGE_KEY)
           console.log('🗑️ Carrito antiguo eliminado')
         }
@@ -89,11 +91,7 @@ export default function Sales() {
     }
   }
 
-  // ============================================
-  // PERSISTENCIA - GUARDAR CARRITO AUTOMÁTICAMENTE
-  // ============================================
   useEffect(() => {
-    // Solo guardar si hay algo en el carrito
     if (Object.keys(cart).length > 0 || mode === 'active') {
       const dataToSave = {
         mode,
@@ -106,15 +104,29 @@ export default function Sales() {
       }
       
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(dataToSave))
-      console.log('💾 Carrito guardado automáticamente')
     } else if (mode === 'idle') {
-      // Si el modo es idle y no hay productos, limpiar storage
       localStorage.removeItem(CART_STORAGE_KEY)
     }
   }, [mode, cart, products, tempProducts, paymentMethod, cashReceived])
 
   // ============================================
-  // BARCODE SCANNER - BÚSQUEDA EXACTA POR UPC
+  // QUICK ADD - AGREGAR PRODUCTO POR PRECIO
+  // ============================================
+  const quickAddPrice = (price) => {
+    const tempProduct = {
+      id: -Date.now(),
+      name: `$${price.toFixed(2)} Product`,
+      price: price,
+      qty: 999999,
+      temp: true,
+    }
+
+    addToCart(tempProduct)
+    toast.success(`$${price.toFixed(2)} agregado`)
+  }
+
+  // ============================================
+  // BARCODE SCANNER
   // ============================================
   const searchProductByUPC = async (upc) => {
     try {
@@ -131,7 +143,6 @@ export default function Sales() {
       const data = await res.json()
       const allProducts = data.rows || []
       
-      // Buscar coincidencia exacta por UPC
       const exactMatch = allProducts.find(p => p.upc === upc)
       
       if (exactMatch) {
@@ -148,35 +159,25 @@ export default function Sales() {
     }
   }
 
-  // ============================================
-  // HANDLE ENTER KEY (SCANNER)
-  // ============================================
   const handleSearchKeyDown = async (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
       e.preventDefault()
       
-      // Intentar agregar por UPC primero
       const found = await searchProductByUPC(searchQuery.trim())
       
       if (found) {
-        // Limpiar input y mantener foco
         setSearchQuery('')
         setSearchResults([])
         
-        // Mantener el foco en el input para seguir escaneando
         if (searchInputRef.current) {
           searchInputRef.current.focus()
         }
       } else {
-        // Si no se encuentra por UPC, mostrar error
         toast.error(`Producto no encontrado: ${searchQuery}`)
       }
     }
   }
 
-  // ============================================
-  // SEARCH (PARA BÚSQUEDA MANUAL)
-  // ============================================
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
     
@@ -235,7 +236,6 @@ export default function Sales() {
       }
     }
 
-    toast.success(`${product.name} agregado`)
     setSearchQuery('')
     setSearchResults([])
   }
@@ -280,9 +280,6 @@ export default function Sales() {
     toast.info('Carrito vaciado')
   }
 
-  // ============================================
-  // TEMP PRODUCTS
-  // ============================================
   const addTempProduct = (e) => {
     e.preventDefault()
     
@@ -390,9 +387,6 @@ export default function Sales() {
     }
   }
 
-  // ============================================
-  // RECEIPT GENERATION
-  // ============================================
   const generateReceipt = (sale) => {
     const allProducts = [...products, ...tempProducts]
     const items = Object.entries(cart).map(([productId, qty]) => {
@@ -532,6 +526,34 @@ export default function Sales() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* Quick Add Pad */}
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="w-5 h-5 text-amber-600" />
+              <span className="text-sm font-semibold text-gray-600 uppercase">
+                Agregar Rápido
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2">
+              {QUICK_PRICES.map(price => (
+                <motion.button
+                  key={price}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => quickAddPrice(price)}
+                  className="aspect-square bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl font-bold text-lg shadow-md hover:shadow-lg transition-all active:scale-95 touch-manipulation select-none"
+                >
+                  ${price < 1 ? price.toFixed(2) : price}
+                </motion.button>
+              ))}
+            </div>
+            
+            <div className="mt-3 text-xs text-gray-500">
+              💡 Toca para agregar productos de precio fijo al carrito
+            </div>
+          </Card>
+
+          {/* Scanner */}
           <Card>
             <div className="flex items-center gap-2 mb-3">
               <Scan className="w-5 h-5 text-primary-600" />
@@ -551,7 +573,7 @@ export default function Sales() {
             />
 
             <div className="mt-2 text-xs text-gray-500">
-              💡 Tip: Escanea el código de barras y presiona Enter para agregar automáticamente
+              💡 Escanea el código de barras y presiona Enter para agregar automáticamente
             </div>
 
             <AnimatePresence>
@@ -568,7 +590,7 @@ export default function Sales() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       onClick={() => addToCart(product)}
-                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors text-left"
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors text-left touch-manipulation"
                     >
                       <div>
                         <div className="font-semibold">{product.name}</div>
@@ -591,6 +613,7 @@ export default function Sales() {
             )}
           </Card>
 
+          {/* Temp Product Form */}
           <Card title="Producto Temporal" icon={Plus}>
             <form onSubmit={addTempProduct} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -618,6 +641,7 @@ export default function Sales() {
           </Card>
         </div>
 
+        {/* Cart Sidebar */}
         <div className="lg:sticky lg:top-24 space-y-6">
           <Card title="Carrito" icon={ShoppingCart}>
             <div className="space-y-4">
@@ -649,7 +673,7 @@ export default function Sales() {
                           </div>
                           <button
                             onClick={() => removeFromCart(product.id)}
-                            className="p-1 hover:bg-red-100 rounded transition-colors"
+                            className="p-1 hover:bg-red-100 rounded transition-colors touch-manipulation"
                           >
                             <Trash2 className="w-4 h-4 text-red-600" />
                           </button>
@@ -659,7 +683,7 @@ export default function Sales() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => updateQuantity(product.id, qty - 1)}
-                              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-100"
+                              className="w-10 h-10 flex items-center justify-center bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-100 touch-manipulation active:scale-95"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
@@ -667,16 +691,16 @@ export default function Sales() {
                               type="number"
                               value={qty}
                               onChange={(e) => updateQuantity(product.id, parseInt(e.target.value) || 0)}
-                              className="w-16 text-center border-2 border-gray-200 rounded-lg py-1"
+                              className="w-16 text-center border-2 border-gray-200 rounded-lg py-1 text-lg font-semibold"
                             />
                             <button
                               onClick={() => updateQuantity(product.id, qty + 1)}
-                              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-100"
+                              className="w-10 h-10 flex items-center justify-center bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-100 touch-manipulation active:scale-95"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
                           </div>
-                          <div className="font-mono font-bold text-primary-600">
+                          <div className="font-mono font-bold text-primary-600 text-lg">
                             ${itemTotal.toFixed(2)}
                           </div>
                         </div>
@@ -711,7 +735,7 @@ export default function Sales() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setPaymentMethod('card')}
-                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-semibold transition-all ${
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-semibold transition-all touch-manipulation active:scale-95 ${
                       paymentMethod === 'card'
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -722,7 +746,7 @@ export default function Sales() {
                   </button>
                   <button
                     onClick={() => setPaymentMethod('cash')}
-                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-semibold transition-all ${
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-semibold transition-all touch-manipulation active:scale-95 ${
                       paymentMethod === 'cash'
                         ? 'bg-green-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -767,7 +791,7 @@ export default function Sales() {
 
               <div className="space-y-2">
                 <Button
-                  className="w-full"
+                  className="w-full touch-manipulation"
                   size="lg"
                   icon={Check}
                   onClick={completeSale}
@@ -776,7 +800,7 @@ export default function Sales() {
                   Completar Venta
                 </Button>
                 <Button
-                  className="w-full"
+                  className="w-full touch-manipulation"
                   variant="outline"
                   onClick={clearCart}
                 >
