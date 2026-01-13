@@ -15,7 +15,6 @@ import {
   FileSpreadsheet,
   Scan,
   Camera,
-  XCircle,
 } from 'lucide-react'
 import Button from '@components/Button'
 import Card from '@components/Card'
@@ -47,93 +46,66 @@ export default function Inventory() {
   
   // Camera scanner
   const [isScanning, setIsScanning] = useState(false)
-  const [cameraError, setCameraError] = useState('')
   
   const fileInputRef = useRef(null)
   const searchTimerRef = useRef(null)
   const searchInputRef = useRef(null)
-  const html5QrcodeRef = useRef(null)
-  const scannerDivRef = useRef(null)
+  const fileInputCameraRef = useRef(null)
 
   // ============================================
-  // CAMERA SCANNER
+  // NATIVE CAMERA SCANNER
   // ============================================
-  const startCameraScanner = async () => {
+  const handleNativeCameraCapture = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
     try {
       setIsScanning(true)
-      setCameraError('')
+      toast.info('Analizando imagen...')
       
-      // Crear instancia del escáner
-      const html5QrCode = new Html5Qrcode("camera-scanner")
-      html5QrcodeRef.current = html5QrCode
+      console.log('📷 Procesando imagen:', file.name)
       
-      // Configuración del escáner
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-      }
+      // Crear instancia de Html5Qrcode para escanear archivo
+      const html5QrCode = new Html5Qrcode("temp-file-scanner")
       
-      // Iniciar escáner
-      await html5QrCode.start(
-        { facingMode: "environment" }, // Cámara trasera
-        config,
-        async (decodedText, decodedResult) => {
-          console.log('📷 Código escaneado:', decodedText)
-          
-          // Buscar producto por UPC
-          const found = await searchProductByUPC(decodedText)
-          
-          if (found) {
-            // Detener escáner automáticamente
-            stopCameraScanner()
-            toast.success('Producto encontrado')
-          } else {
-            // Vibrar en móvil si no se encuentra
-            if (navigator.vibrate) {
-              navigator.vibrate(200)
-            }
-          }
-        },
-        (errorMessage) => {
-          // Errores de lectura (no críticos)
-          // console.log('Scanner error:', errorMessage)
+      try {
+        // Escanear el archivo de imagen
+        const decodedText = await html5QrCode.scanFile(file, false)
+        console.log('✅ Código detectado:', decodedText)
+        
+        // Vibrar si está disponible
+        if (navigator.vibrate) {
+          navigator.vibrate(200)
         }
-      )
+        
+        // Buscar producto por UPC
+        const found = await searchProductByUPC(decodedText)
+        
+        if (found) {
+          toast.success('¡Producto encontrado!')
+        }
+        
+      } catch (scanError) {
+        console.error('❌ Error al escanear:', scanError)
+        toast.error('No se pudo detectar código de barras. Asegúrate de que el código esté visible y enfocado.')
+        
+        if (navigator.vibrate) {
+          navigator.vibrate([100, 50, 100, 50, 100])
+        }
+      } finally {
+        // Limpiar
+        html5QrCode.clear()
+      }
       
-      console.log('✅ Escáner de cámara iniciado')
     } catch (error) {
-      console.error('❌ Error al iniciar escáner:', error)
-      setCameraError('No se pudo acceder a la cámara. Verifica los permisos.')
-      toast.error('Error al acceder a la cámara')
+      console.error('Error al procesar imagen:', error)
+      toast.error('Error al procesar la imagen')
+    } finally {
       setIsScanning(false)
+      // Reset input para poder tomar otra foto
+      e.target.value = ''
     }
   }
-
-  const stopCameraScanner = async () => {
-    try {
-      if (html5QrcodeRef.current) {
-        await html5QrcodeRef.current.stop()
-        html5QrcodeRef.current.clear()
-        html5QrcodeRef.current = null
-      }
-      setIsScanning(false)
-      setCameraError('')
-      console.log('✅ Escáner de cámara detenido')
-    } catch (error) {
-      console.error('Error stopping scanner:', error)
-      setIsScanning(false)
-    }
-  }
-
-  // Limpiar escáner al desmontar componente
-  useEffect(() => {
-    return () => {
-      if (html5QrcodeRef.current) {
-        html5QrcodeRef.current.stop().catch(console.error)
-      }
-    }
-  }, [])
 
   // ============================================
   // BARCODE SCANNER - BÚSQUEDA EXACTA POR UPC
@@ -422,6 +394,19 @@ export default function Inventory() {
   // ============================================
   return (
     <div className="space-y-6">
+      {/* Div oculto para scanFile */}
+      <div id="temp-file-scanner" style={{ display: 'none' }} />
+      
+      {/* Input oculto para cámara nativa */}
+      <input
+        ref={fileInputCameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleNativeCameraCapture}
+        style={{ display: 'none' }}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -470,66 +455,6 @@ export default function Inventory() {
           </Button>
         </div>
       </div>
-
-      {/* Camera Scanner Modal */}
-      <AnimatePresence>
-        {isScanning && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-            onClick={stopCameraScanner}
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="bg-white rounded-2xl p-6 max-w-lg w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Escanear Código de Barras</h3>
-                <button
-                  onClick={stopCameraScanner}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <XCircle className="w-6 h-6 text-gray-600" />
-                </button>
-              </div>
-
-              {cameraError ? (
-                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-red-800">
-                  <p className="font-semibold mb-2">Error de Cámara</p>
-                  <p className="text-sm">{cameraError}</p>
-                  <Button
-                    className="mt-4"
-                    onClick={() => {
-                      setCameraError('')
-                      startCameraScanner()
-                    }}
-                  >
-                    Reintentar
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div
-                    id="camera-scanner"
-                    ref={scannerDivRef}
-                    className="w-full rounded-xl overflow-hidden bg-black"
-                  />
-                  
-                  <div className="mt-4 text-center text-sm text-gray-600">
-                    <p className="font-semibold mb-1">📷 Apunta la cámara al código de barras</p>
-                    <p>El producto se buscará automáticamente al detectarlo</p>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Add Product Form */}
       {mode === 'add' && (
@@ -662,10 +587,11 @@ export default function Inventory() {
             <Button
               variant="outline"
               icon={Camera}
-              onClick={startCameraScanner}
+              onClick={() => fileInputCameraRef.current?.click()}
+              loading={isScanning}
               className="md:hidden"
             >
-              Cámara
+              {isScanning ? '...' : 'Foto'}
             </Button>
           </div>
           
@@ -685,15 +611,16 @@ export default function Inventory() {
             <Button
               variant="outline"
               icon={Camera}
-              onClick={startCameraScanner}
+              onClick={() => fileInputCameraRef.current?.click()}
+              loading={isScanning}
               className="hidden md:flex"
             >
-              Escanear con Cámara
+              {isScanning ? 'Analizando...' : 'Tomar Foto'}
             </Button>
           </div>
 
           <div className="mt-2 text-xs text-gray-500">
-            💡 Tip: Escanea con escáner externo, teclado (Enter), o usa la cámara del móvil
+            💡 Tip: Escanea con escáner físico (Enter) o toma foto del código con la cámara
           </div>
         </Card>
       )}
