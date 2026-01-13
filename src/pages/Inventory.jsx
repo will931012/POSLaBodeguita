@@ -51,6 +51,7 @@ export default function Inventory() {
   const searchTimerRef = useRef(null)
   const searchInputRef = useRef(null)
   const fileInputCameraRef = useRef(null)
+  const skipReloadRef = useRef(false) // Flag para evitar recarga después de escaneo
 
   // ============================================
   // NATIVE CAMERA SCANNER
@@ -135,6 +136,9 @@ export default function Inventory() {
       if (exactMatch) {
         console.log('✅ Producto encontrado:', exactMatch.name)
         
+        // Activar flag para evitar recarga
+        skipReloadRef.current = true
+        
         setProducts([exactMatch])
         setTotal(1)
         setOffset(1)
@@ -161,6 +165,7 @@ export default function Inventory() {
       const found = await searchProductByUPC(searchQuery.trim())
       
       if (found) {
+        // Limpiar input después de encontrar
         setTimeout(() => {
           setSearchQuery('')
           if (searchInputRef.current) {
@@ -214,6 +219,12 @@ export default function Inventory() {
 
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    
+    // Si acabamos de escanear, no recargar
+    if (skipReloadRef.current) {
+      skipReloadRef.current = false
+      return
+    }
     
     if (searchQuery && searchQuery.length >= 2) {
       searchTimerRef.current = setTimeout(() => {
