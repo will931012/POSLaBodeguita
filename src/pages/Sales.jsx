@@ -123,6 +123,13 @@ export default function Sales() {
 
     addToCart(tempProduct)
     toast.success(`$${price.toFixed(2)} agregado`)
+    
+    // Devolver foco al input de búsqueda para seguir escaneando
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus()
+      }
+    }, 100)
   }
 
   // ============================================
@@ -232,6 +239,13 @@ export default function Sales() {
 
     setSearchQuery('')
     setSearchResults([])
+    
+    // Mantener foco en input para seguir escaneando
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus()
+      }
+    }, 50)
   }
 
   const updateQuantity = (productId, newQty) => {
