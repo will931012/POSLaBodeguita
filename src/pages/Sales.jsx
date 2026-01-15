@@ -429,14 +429,18 @@ export default function Sales() {
         console.error('Sale ID que intentamos usar:', sale.id)
       }
 
-      // En lugar de imprimir directamente, mostrar modal
+      // Guardar recibo para el modal
       setPendingReceipt(receiptHTML)
+      
+      // Mostrar toast de éxito
+      toast.success('¡Venta completada!')
+      
+      // Mostrar modal ANTES de limpiar
       setShowTicketModal(true)
       
-      // Limpiar carrito y resetear modo
-      clearCart()
-      setMode('idle')
-      toast.success('¡Venta completada!')
+      // NO limpiar ni cambiar modo aquí
+      // Se hará en handleTicketResponse
+      
     } catch (error) {
       console.error('Sale error:', error)
       toast.error(error.message || 'Error al completar la venta')
@@ -560,9 +564,13 @@ export default function Sales() {
       printReceipt(pendingReceipt)
     }
     
-    // Cerrar modal y limpiar
+    // Cerrar modal
     setShowTicketModal(false)
     setPendingReceipt(null)
+    
+    // AHORA SÍ limpiar carrito y volver a idle
+    clearCart()
+    setMode('idle')
   }
 
   // ============================================
@@ -570,20 +578,79 @@ export default function Sales() {
   // ============================================
   if (mode === 'idle') {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="text-center"
-        >
-          <ShoppingCart className="w-24 h-24 mx-auto mb-6 text-primary-600" />
-          <h1 className="text-4xl font-bold text-gradient mb-4">Nueva Venta</h1>
-          <p className="text-gray-600 mb-8">Comienza a agregar productos al carrito</p>
-          <Button size="xl" onClick={() => setMode('active')}>
-            Iniciar Venta
-          </Button>
-        </motion.div>
-      </div>
+      <>
+        <div className="min-h-[80vh] flex items-center justify-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center"
+          >
+            <ShoppingCart className="w-24 h-24 mx-auto mb-6 text-primary-600" />
+            <h1 className="text-4xl font-bold text-gradient mb-4">Nueva Venta</h1>
+            <p className="text-gray-600 mb-8">Comienza a agregar productos al carrito</p>
+            <Button size="xl" onClick={() => setMode('active')}>
+              Iniciar Venta
+            </Button>
+          </motion.div>
+        </div>
+
+        {/* Modal de Confirmación de Ticket */}
+        <AnimatePresence>
+          {showTicketModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
+              >
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    ¡Venta Completada!
+                  </h2>
+                  <p className="text-gray-600">
+                    ¿El cliente desea ticket impreso?
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => handleTicketResponse(false)}
+                    className="w-full"
+                  >
+                    No, Gracias
+                  </Button>
+                  <Button
+                    size="lg"
+                    onClick={() => handleTicketResponse(true)}
+                    className="w-full"
+                    icon={Printer}
+                  >
+                    Sí, Imprimir
+                  </Button>
+                </div>
+
+                <button
+                  onClick={() => handleTicketResponse(false)}
+                  className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </>
     )
   }
 
@@ -897,63 +964,6 @@ export default function Sales() {
           </Card>
         </div>
       </div>
-
-      {/* Modal de Confirmación de Ticket */}
-      <AnimatePresence>
-        {showTicketModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
-            >
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-8 h-8 text-green-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  ¡Venta Completada!
-                </h2>
-                <p className="text-gray-600">
-                  ¿El cliente desea ticket impreso?
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => handleTicketResponse(false)}
-                  className="w-full"
-                >
-                  No, Gracias
-                </Button>
-                <Button
-                  size="lg"
-                  onClick={() => handleTicketResponse(true)}
-                  className="w-full"
-                  icon={Printer}
-                >
-                  Sí, Imprimir
-                </Button>
-              </div>
-
-              <button
-                onClick={() => handleTicketResponse(false)}
-                className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                Cerrar
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
