@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Receipt, Search, Eye, Printer, Trash2, Calendar, Filter } from 'lucide-react'
+import { Receipt, Search, Eye, Printer, Trash2, Calendar } from 'lucide-react'
 import Button from '@components/Button'
 import Card from '@components/Card'
 import Input from '@components/Input'
@@ -19,6 +19,7 @@ export default function Receipts() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedReceipt, setSelectedReceipt] = useState(null)
   const [showModal, setShowModal] = useState(false)
+  const [loadingDetails, setLoadingDetails] = useState(false)
   
   // Filtros
   const [dateFilter, setDateFilter] = useState('all') // 'all' | 'today' | 'week' | 'month'
@@ -39,6 +40,7 @@ export default function Receipts() {
       if (!res.ok) throw new Error('Failed to load receipts')
       
       const data = await res.json()
+      console.log('📋 Recibos cargados:', data.length)
       setReceipts(data)
       setFilteredReceipts(data)
     } catch (error) {
@@ -97,16 +99,29 @@ export default function Receipts() {
   // ============================================
   const viewReceipt = async (receipt) => {
     try {
+      setLoadingDetails(true)
+      setShowModal(true)
+      
+      console.log('👁️ Cargando detalles del recibo:', receipt.id)
+      
       const res = await fetch(`${API}/api/receipts/${receipt.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      if (!res.ok) throw new Error('Failed to load receipt details')
+      
+      if (!res.ok) {
+        throw new Error('Failed to load receipt details')
+      }
       
       const data = await res.json()
+      console.log('✅ Detalles del recibo:', data)
+      
       setSelectedReceipt(data)
-      setShowModal(true)
     } catch (error) {
+      console.error('Error loading receipt:', error)
       toast.error('Error al cargar el recibo')
+      setShowModal(false)
+    } finally {
+      setLoadingDetails(false)
     }
   }
 
@@ -149,7 +164,14 @@ export default function Receipts() {
 
       setReceipts(receipts.filter(r => r.id !== id))
       toast.success('Recibo eliminado')
+      
+      // Cerrar modal si es el recibo seleccionado
+      if (selectedReceipt?.id === id) {
+        setShowModal(false)
+        setSelectedReceipt(null)
+      }
     } catch (error) {
+      console.error('Delete error:', error)
       toast.error('No se pudo eliminar el recibo')
     }
   }
@@ -186,7 +208,7 @@ export default function Receipts() {
         <Card>
           <Input
             icon={Search}
-            placeholder="Buscar por ID, proveedor o notas..."
+            placeholder="Buscar por ID, venta, proveedor o notas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -348,16 +370,6 @@ export default function Receipts() {
                             <Eye className="w-4 h-4" />
                           </button>
                           
-                          {receipt.content && (
-                            <button
-                              onClick={() => printReceipt(receipt)}
-                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="Imprimir"
-                            >
-                              <Printer className="w-4 h-4" />
-                            </button>
-                          )}
-                          
                           <button
                             onClick={() => deleteReceipt(receipt.id)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -378,13 +390,16 @@ export default function Receipts() {
 
       {/* Modal de Detalles */}
       <AnimatePresence>
-        {showModal && selectedReceipt && (
+        {showModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowModal(false)}
+            onClick={() => {
+              setShowModal(false)
+              setSelectedReceipt(null)
+            }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -393,87 +408,119 @@ export default function Receipts() {
               onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
             >
-              {/* Header */}
-              <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">Recibo #{selectedReceipt.id}</h2>
-                    <p className="text-primary-100 mt-1">
-                      {format(new Date(selectedReceipt.created_at), 'dd MMMM yyyy • HH:mm', { locale: es })}
-                    </p>
+              {loadingDetails ? (
+                <div className="p-12 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="spinner mx-auto mb-4"></div>
+                    <p className="text-gray-600">Cargando recibo...</p>
                   </div>
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
                 </div>
-              </div>
-
-              {/* Body */}
-              <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-200px)]">
-                {selectedReceipt.sale_id && (
-                  <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                    <div className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-1">
-                      Venta ID
-                    </div>
-                    <div className="text-2xl font-bold text-green-900 font-mono">
-                      #{selectedReceipt.sale_id}
+              ) : selectedReceipt ? (
+                <>
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold">Recibo #{selectedReceipt.id}</h2>
+                        <p className="text-primary-100 mt-1">
+                          {format(new Date(selectedReceipt.created_at), 'dd MMMM yyyy • HH:mm', { locale: es })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowModal(false)
+                          setSelectedReceipt(null)
+                        }}
+                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-                )}
 
-                {selectedReceipt.supplier && (
-                  <div>
-                    <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Proveedor
-                    </div>
-                    <div className="text-lg">{selectedReceipt.supplier}</div>
+                  {/* Body */}
+                  <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-200px)]">
+                    {selectedReceipt.sale_id && (
+                      <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                        <div className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-1">
+                          Venta ID
+                        </div>
+                        <div className="text-2xl font-bold text-green-900 font-mono">
+                          #{selectedReceipt.sale_id}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedReceipt.supplier && (
+                      <div>
+                        <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
+                          Proveedor
+                        </div>
+                        <div className="text-lg">{selectedReceipt.supplier}</div>
+                      </div>
+                    )}
+
+                    {selectedReceipt.notes && (
+                      <div>
+                        <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
+                          Notas
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4">{selectedReceipt.notes}</div>
+                      </div>
+                    )}
+
+                    {selectedReceipt.content ? (
+                      <div>
+                        <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
+                          Contenido del Recibo
+                        </div>
+                        <div 
+                          className="bg-gray-50 rounded-lg p-4 border border-gray-200 overflow-x-auto"
+                          dangerouslySetInnerHTML={{ __html: selectedReceipt.content }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4">
+                        <div className="flex items-center gap-2 text-yellow-800">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <span className="font-semibold">
+                            Este recibo no tiene contenido HTML almacenado
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {selectedReceipt.notes && (
-                  <div>
-                    <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Notas
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">{selectedReceipt.notes}</div>
+                  {/* Footer */}
+                  <div className="bg-gray-50 p-6 flex gap-2">
+                    {selectedReceipt.content && (
+                      <Button
+                        icon={Printer}
+                        onClick={() => printReceipt(selectedReceipt)}
+                      >
+                        Imprimir
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowModal(false)
+                        setSelectedReceipt(null)
+                      }}
+                    >
+                      Cerrar
+                    </Button>
                   </div>
-                )}
-
-                {selectedReceipt.content && (
-                  <div>
-                    <div className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Contenido del Recibo
-                    </div>
-                    <div 
-                      className="bg-gray-50 rounded-lg p-4 border border-gray-200 overflow-x-auto"
-                      dangerouslySetInnerHTML={{ __html: selectedReceipt.content }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="bg-gray-50 p-6 flex gap-2">
-                {selectedReceipt.content && (
-                  <Button
-                    icon={Printer}
-                    onClick={() => printReceipt(selectedReceipt)}
-                  >
-                    Imprimir
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => setShowModal(false)}
-                >
-                  Cerrar
-                </Button>
-              </div>
+                </>
+              ) : (
+                <div className="p-12 text-center text-gray-500">
+                  <p>No se pudo cargar el recibo</p>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

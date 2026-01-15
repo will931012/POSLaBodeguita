@@ -46,6 +46,7 @@ export default function Sales() {
   const [cashReceived, setCashReceived] = useState('')
   
   const [tempForm, setTempForm] = useState({ name: '', price: '', qty: '1' })
+  const [isCompletingSale, setIsCompletingSale] = useState(false)
   
   const searchTimerRef = useRef(null)
   const searchInputRef = useRef(null)
@@ -329,13 +330,24 @@ export default function Sales() {
       return
     }
 
+    // Prevenir múltiples clicks
+    if (isCompletingSale) {
+      console.log('⚠️ Venta ya en proceso, ignorando click')
+      return
+    }
+
     try {
+      setIsCompletingSale(true)
+      console.log('🛒 Iniciando completar venta...')
+
       const inventoryItems = products
         .filter(p => cart[p.id])
         .map(p => ({
           product_id: p.id,
           qty: cart[p.id],
         }))
+
+      console.log('📦 Items del inventario:', inventoryItems)
 
       const saleRes = await fetch(`${API}/api/sales`, {
         method: 'POST',
@@ -360,11 +372,14 @@ export default function Sales() {
       }
 
       const sale = await saleRes.json()
+      console.log('✅ Venta creada:', sale.id)
 
       const receiptHTML = generateReceipt(sale)
 
+      // Guardar recibo (solo una vez)
       try {
-        await fetch(`${API}/api/receipts`, {
+        console.log('📋 Guardando recibo para venta #', sale.id)
+        const receiptRes = await fetch(`${API}/api/receipts`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -375,6 +390,13 @@ export default function Sales() {
             content: receiptHTML,
           }),
         })
+
+        if (receiptRes.ok) {
+          const receipt = await receiptRes.json()
+          console.log('✅ Recibo guardado:', receipt.id)
+        } else {
+          console.error('❌ Error guardando recibo:', await receiptRes.text())
+        }
       } catch (error) {
         console.error('Receipt save error:', error)
       }
@@ -386,6 +408,8 @@ export default function Sales() {
     } catch (error) {
       console.error('Sale error:', error)
       toast.error(error.message || 'Error al completar la venta')
+    } finally {
+      setIsCompletingSale(false)
     }
   }
 
@@ -797,9 +821,10 @@ export default function Sales() {
                   size="lg"
                   icon={Check}
                   onClick={completeSale}
-                  disabled={Object.keys(cart).length === 0 || (paymentMethod === 'cash' && shortfall > 0)}
+                  loading={isCompletingSale}
+                  disabled={Object.keys(cart).length === 0 || (paymentMethod === 'cash' && shortfall > 0) || isCompletingSale}
                 >
-                  Completar Venta
+                  {isCompletingSale ? 'Procesando...' : 'Completar Venta'}
                 </Button>
                 <Button
                   className="w-full touch-manipulation"
