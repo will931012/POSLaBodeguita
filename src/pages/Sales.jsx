@@ -12,6 +12,7 @@ import {
   Scan,
   Save,
   Zap,
+  Printer,
 } from 'lucide-react'
 import Button from '@components/Button'
 import Card from '@components/Card'
@@ -47,6 +48,10 @@ export default function Sales() {
   
   const [tempForm, setTempForm] = useState({ name: '', price: '', qty: '1' })
   const [isCompletingSale, setIsCompletingSale] = useState(false)
+  
+  // Modal de ticket
+  const [showTicketModal, setShowTicketModal] = useState(false)
+  const [pendingReceipt, setPendingReceipt] = useState(null)
   
   const searchTimerRef = useRef(null)
   const searchInputRef = useRef(null)
@@ -424,7 +429,11 @@ export default function Sales() {
         console.error('Sale ID que intentamos usar:', sale.id)
       }
 
-      printReceipt(receiptHTML)
+      // En lugar de imprimir directamente, mostrar modal
+      setPendingReceipt(receiptHTML)
+      setShowTicketModal(true)
+      
+      // Limpiar carrito y resetear modo
       clearCart()
       setMode('idle')
       toast.success('¡Venta completada!')
@@ -514,19 +523,46 @@ export default function Sales() {
   }
 
   const printReceipt = (html) => {
-    const printWindow = window.open('', 'PRINT', 'height=600,width=400')
-    if (!printWindow) {
-      toast.error('Popup bloqueado. Permite popups para imprimir.')
-      return
+    try {
+      const printWindow = window.open('', 'PRINT', 'height=600,width=400')
+      
+      if (!printWindow) {
+        toast.error('Popup bloqueado. Permite popups para imprimir.')
+        return false
+      }
+      
+      printWindow.document.write(html)
+      printWindow.document.close()
+      printWindow.focus()
+      
+      setTimeout(() => {
+        try {
+          printWindow.print()
+          setTimeout(() => {
+            printWindow.close()
+          }, 100)
+        } catch (err) {
+          console.error('Error al imprimir:', err)
+          printWindow.close()
+        }
+      }, 250)
+      
+      return true
+    } catch (error) {
+      console.error('Error en printReceipt:', error)
+      toast.error('Error al abrir ventana de impresión')
+      return false
+    }
+  }
+
+  const handleTicketResponse = (wantsPrint) => {
+    if (wantsPrint && pendingReceipt) {
+      printReceipt(pendingReceipt)
     }
     
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.focus()
-    setTimeout(() => {
-      printWindow.print()
-      printWindow.close()
-    }, 250)
+    // Cerrar modal y limpiar
+    setShowTicketModal(false)
+    setPendingReceipt(null)
   }
 
   // ============================================
@@ -861,6 +897,63 @@ export default function Sales() {
           </Card>
         </div>
       </div>
+
+      {/* Modal de Confirmación de Ticket */}
+      <AnimatePresence>
+        {showTicketModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  ¡Venta Completada!
+                </h2>
+                <p className="text-gray-600">
+                  ¿El cliente desea ticket impreso?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => handleTicketResponse(false)}
+                  className="w-full"
+                >
+                  No, Gracias
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => handleTicketResponse(true)}
+                  className="w-full"
+                  icon={Printer}
+                >
+                  Sí, Imprimir
+                </Button>
+              </div>
+
+              <button
+                onClick={() => handleTicketResponse(false)}
+                className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Cerrar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
