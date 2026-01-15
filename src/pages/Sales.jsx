@@ -576,9 +576,13 @@ export default function Sales() {
   // ============================================
   // RENDER
   // ============================================
-  if (mode === 'idle') {
-    return (
-      <>
+  const allProducts = [...products, ...tempProducts]
+  const itemCount = Object.keys(cart).length
+
+  return (
+    <>
+      {/* Modo Idle */}
+      {mode === 'idle' && (
         <div className="min-h-[80vh] flex items-center justify-center">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -593,71 +597,10 @@ export default function Sales() {
             </Button>
           </motion.div>
         </div>
+      )}
 
-        {/* Modal de Confirmación de Ticket */}
-        <AnimatePresence>
-          {showTicketModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
-              >
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Check className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    ¡Venta Completada!
-                  </h2>
-                  <p className="text-gray-600">
-                    ¿El cliente desea ticket impreso?
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => handleTicketResponse(false)}
-                    className="w-full"
-                  >
-                    No, Gracias
-                  </Button>
-                  <Button
-                    size="lg"
-                    onClick={() => handleTicketResponse(true)}
-                    className="w-full"
-                    icon={Printer}
-                  >
-                    Sí, Imprimir
-                  </Button>
-                </div>
-
-                <button
-                  onClick={() => handleTicketResponse(false)}
-                  className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  Cerrar
-                </button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </>
-    )
-  }
-
-  const allProducts = [...products, ...tempProducts]
-  const itemCount = Object.keys(cart).length
-
-  return (
+      {/* Modo Active */}
+      {mode === 'active' && (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -964,6 +907,65 @@ export default function Sales() {
           </Card>
         </div>
       </div>
-    </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Ticket - Siempre disponible */}
+      <AnimatePresence>
+        {showTicketModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  ¡Venta Completada!
+                </h2>
+                <p className="text-gray-600">
+                  ¿El cliente desea ticket impreso?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => handleTicketResponse(false)}
+                  className="w-full"
+                >
+                  No, Gracias
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => handleTicketResponse(true)}
+                  className="w-full"
+                  icon={Printer}
+                >
+                  Sí, Imprimir
+                </Button>
+              </div>
+
+              <button
+                onClick={() => handleTicketResponse(false)}
+                className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Cerrar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
