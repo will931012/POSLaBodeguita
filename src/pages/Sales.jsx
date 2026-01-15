@@ -372,13 +372,24 @@ export default function Sales() {
       }
 
       const sale = await saleRes.json()
-      console.log('✅ Venta creada:', sale.id)
+      console.log('✅ Venta creada:', sale)
+      console.log('🔍 Sale ID:', sale.id, 'tipo:', typeof sale.id)
+
+      // VALIDACIÓN CRÍTICA
+      if (!sale || !sale.id) {
+        console.error('❌ ERROR CRÍTICO: La venta no devolvió un ID válido')
+        console.error('Sale object:', JSON.stringify(sale, null, 2))
+        throw new Error('La venta se creó pero no devolvió un ID válido')
+      }
 
       const receiptHTML = generateReceipt(sale)
 
       // Guardar recibo (solo una vez)
       try {
-        console.log('📋 Guardando recibo para venta #', sale.id)
+        console.log('📋 === GUARDANDO RECIBO ===')
+        console.log('Sale ID para recibo:', sale.id, 'tipo:', typeof sale.id)
+        console.log('Content length:', receiptHTML.length)
+        
         const receiptRes = await fetch(`${API}/api/receipts`, {
           method: 'POST',
           headers: {
@@ -388,17 +399,29 @@ export default function Sales() {
           body: JSON.stringify({
             sale_id: sale.id,
             content: receiptHTML,
+            supplier: null,
+            notes: null,
           }),
         })
 
         if (receiptRes.ok) {
           const receipt = await receiptRes.json()
-          console.log('✅ Recibo guardado:', receipt.id)
+          console.log('✅ Recibo guardado exitosamente:')
+          console.log('  - Receipt ID:', receipt.id)
+          console.log('  - Sale ID:', receipt.sale_id)
+          console.log('  - Location ID:', receipt.location_id)
         } else {
-          console.error('❌ Error guardando recibo:', await receiptRes.text())
+          const errorText = await receiptRes.text()
+          console.error('❌ Error guardando recibo:', errorText)
+          console.error('Status:', receiptRes.status)
+          console.error('Body enviado:', JSON.stringify({
+            sale_id: sale.id,
+            content: receiptHTML.substring(0, 100) + '...',
+          }))
         }
       } catch (error) {
-        console.error('Receipt save error:', error)
+        console.error('❌ Exception guardando recibo:', error)
+        console.error('Sale ID que intentamos usar:', sale.id)
       }
 
       printReceipt(receiptHTML)
