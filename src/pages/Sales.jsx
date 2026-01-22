@@ -251,7 +251,7 @@ export default function Sales() {
       if (searchInputRef.current) {
         searchInputRef.current.focus()
       }
-    }, 50)
+    }, 25)
   }
 
   const updateQuantity = (productId, newQty) => {
