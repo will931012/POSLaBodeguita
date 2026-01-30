@@ -404,395 +404,399 @@ export default function Inventory() {
   // RENDER
   // ============================================
   return (
-    <div className="space-y-6">
-      {/* Div oculto para scanFile */}
-      <div id="temp-file-scanner" style={{ display: 'none' }} />
-      
-      {/* Input oculto para cámara nativa */}
-      <input
-        ref={fileInputCameraRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleNativeCameraCapture}
-        style={{ display: 'none' }}
-      />
+    <div className="h-screen overflow-y-auto">
+      <div className="space-y-6 p-6">
+        {/* Div oculto para scanFile */}
+        <div id="temp-file-scanner" style={{ display: 'none' }} />
+        
+        {/* Input oculto para cámara nativa */}
+        <input
+          ref={fileInputCameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleNativeCameraCapture}
+          style={{ display: 'none' }}
+        />
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-gradient">Inventario</h1>
-          <p className="text-gray-600 mt-1">
-            {total} productos • {mode === 'low' ? 'Stock Bajo' : 'Todos'}
-          </p>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gradient">Inventario</h1>
+            <p className="text-gray-600 mt-1">
+              {total} productos • {mode === 'low' ? 'Stock Bajo' : 'Todos'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={mode === 'search' ? 'primary' : 'outline'}
+              icon={Search}
+              onClick={() => setMode('search')}
+            >
+              Buscar
+            </Button>
+            <Button
+              variant={mode === 'low' ? 'primary' : 'outline'}
+              icon={AlertTriangle}
+              onClick={() => setMode('low')}
+            >
+              Stock Bajo
+            </Button>
+            <Button
+              variant={mode === 'add' ? 'primary' : 'outline'}
+              icon={Plus}
+              onClick={() => setMode('add')}
+            >
+              Agregar
+            </Button>
+            <Button
+              variant={mode === 'import' ? 'primary' : 'outline'}
+              icon={Upload}
+              onClick={() => setMode('import')}
+            >
+              Importar
+            </Button>
+            <Button
+              variant="outline"
+              icon={Download}
+              onClick={exportProducts}
+              disabled={products.length === 0}
+            >
+              Exportar
+            </Button>
+          </div>
         </div>
 
-        <div className="flex sticky flex-wrap gap-2">
-          <Button
-            variant={mode === 'search' ? 'primary' : 'outline'}
-            icon={Search}
-            onClick={() => setMode('search')}
-          >
-            Buscar
-          </Button>
-          <Button
-            variant={mode === 'low' ? 'primary' : 'outline'}
-            icon={AlertTriangle}
-            onClick={() => setMode('low')}
-          >
-            Stock Bajo
-          </Button>
-          <Button
-            variant={mode === 'add' ? 'primary' : 'outline'}
-            icon={Plus}
-            onClick={() => setMode('add')}
-          >
-            Agregar
-          </Button>
-          <Button
-            variant={mode === 'import' ? 'primary' : 'outline'}
-            icon={Upload}
-            onClick={() => setMode('import')}
-          >
-            Importar
-          </Button>
-          <Button
-            variant="outline"
-            icon={Download}
-            onClick={exportProducts}
-            disabled={products.length === 0}
-          >
-            Exportar
-          </Button>
-        </div>
-      </div>
+        {/* Add Product Form */}
+        {mode === 'add' && (
+          <Card title="Agregar Producto" icon={Plus}>
+            <form onSubmit={addProduct} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="UPC (Código de Barras)"
+                  placeholder="123456789"
+                  value={addForm.upc}
+                  onChange={(e) => setAddForm({ ...addForm, upc: e.target.value })}
+                />
+                <Input
+                  label="Nombre *"
+                  placeholder="Nombre del producto"
+                  value={addForm.name}
+                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                  required
+                />
+                <Input
+                  label="Precio *"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={addForm.price}
+                  onChange={(e) => setAddForm({ ...addForm, price: e.target.value })}
+                  required
+                />
+                <Input
+                  label="Cantidad"
+                  type="number"
+                  placeholder="0"
+                  value={addForm.qty}
+                  onChange={(e) => setAddForm({ ...addForm, qty: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" icon={Check}>
+                  Crear Producto
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMode('search')}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
 
-      {/* Add Product Form */}
-      {mode === 'add' && (
-        <Card title="Agregar Producto" icon={Plus}>
-          <form onSubmit={addProduct} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="UPC (Código de Barras)"
-                placeholder="123456789"
-                value={addForm.upc}
-                onChange={(e) => setAddForm({ ...addForm, upc: e.target.value })}
-              />
-              <Input
-                label="Nombre *"
-                placeholder="Nombre del producto"
-                value={addForm.name}
-                onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                required
-              />
-              <Input
-                label="Precio *"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={addForm.price}
-                onChange={(e) => setAddForm({ ...addForm, price: e.target.value })}
-                required
-              />
-              <Input
-                label="Cantidad"
-                type="number"
-                placeholder="0"
-                value={addForm.qty}
-                onChange={(e) => setAddForm({ ...addForm, qty: e.target.value })}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" icon={Check}>
-                Crear Producto
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setMode('search')}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
+        {/* Import CSV */}
+        {mode === 'import' && (
+          <Card title="Importar Productos (CSV)" icon={Upload}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Formato CSV: upc,name,price,qty
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setImportFile(e.target.files[0])}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                />
+              </div>
 
-      {/* Import CSV */}
-      {mode === 'import' && (
-        <Card title="Importar Productos (CSV)" icon={Upload}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Formato CSV: upc,name,price,qty
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={(e) => setImportFile(e.target.files[0])}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-              />
+              {importResult && (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h3 className="font-semibold mb-2">Resultado de Importación</h3>
+                  <p>Importados: {importResult.imported}</p>
+                  <p>Errores: {importResult.errors}</p>
+                  {importResult.preview && (
+                    <div className="mt-2">
+                      <p className="text-sm font-semibold">Vista Previa:</p>
+                      <pre className="text-xs bg-white p-2 rounded mt-1 overflow-x-auto">
+                        {JSON.stringify(importResult.preview, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleImport(true)}
+                  loading={importing}
+                  disabled={!importFile}
+                  variant="outline"
+                >
+                  Vista Previa
+                </Button>
+                <Button
+                  onClick={() => handleImport(false)}
+                  loading={importing}
+                  disabled={!importFile}
+                  icon={Upload}
+                >
+                  Importar
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setMode('search')
+                    setImportFile(null)
+                    setImportResult(null)
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* 🔒 STICKY SEARCH BOX */}
+        {(mode === 'search' || mode === 'low') && (
+          <div className="sticky top-0 z-30 bg-white py-4 -mx-6 px-6 shadow-sm">
+            <Card>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Scan className="w-5 h-5 text-primary-600" />
+                  <span className="text-sm font-semibold text-gray-600 uppercase">
+                    Buscar Productos
+                  </span>
+                </div>
+                
+                {/* Botón de cámara para móviles */}
+                <Button
+                  variant="outline"
+                  icon={Camera}
+                  onClick={() => fileInputCameraRef.current?.click()}
+                  loading={isScanning}
+                  className="md:hidden"
+                >
+                  {isScanning ? '...' : 'Foto'}
+                </Button>
+              </div>
+              
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    ref={searchInputRef}
+                    icon={Search}
+                    placeholder="Escanea UPC o busca por nombre..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                  />
+                </div>
+                
+                {/* Botón de cámara para desktop */}
+                <Button
+                  variant="outline"
+                  icon={Camera}
+                  onClick={() => fileInputCameraRef.current?.click()}
+                  loading={isScanning}
+                  className="hidden md:flex"
+                >
+                  {isScanning ? 'Analizando...' : 'Tomar Foto'}
+                </Button>
+              </div>
+
+              <div className="mt-2 text-xs text-gray-500">
+                💡 Tip: Escanea con escáner físico (Enter) o toma foto del código con la cámara
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Products Table */}
+        {(mode === 'search' || mode === 'low') && (
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">UPC</th>
+                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Producto</th>
+                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Precio</th>
+                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Stock</th>
+                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && products.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="text-center py-12">
+                        <div className="spinner mx-auto"></div>
+                      </td>
+                    </tr>
+                  ) : products.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="text-center py-12 text-gray-500">
+                        <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                        <p>No hay productos</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    <AnimatePresence>
+                      {products.map((product) => (
+                        <motion.tr
+                          key={product.id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="border-b border-gray-100 hover:bg-gray-50"
+                        >
+                          {editingId === product.id ? (
+                            <>
+                              <td className="p-4">
+                                <input
+                                  type="text"
+                                  value={editForm.upc}
+                                  onChange={(e) => setEditForm({ ...editForm, upc: e.target.value })}
+                                  className="w-full px-2 py-1 border rounded font-mono text-sm"
+                                  placeholder="UPC"
+                                />
+                              </td>
+                              <td className="p-4">
+                                <input
+                                  type="text"
+                                  value={editForm.name}
+                                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                  className="w-full px-2 py-1 border rounded"
+                                />
+                              </td>
+                              <td className="p-4">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editForm.price}
+                                  onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                                  className="w-24 px-2 py-1 border rounded"
+                                />
+                              </td>
+                              <td className="p-4">
+                                <input
+                                  type="number"
+                                  value={editForm.qty}
+                                  onChange={(e) => setEditForm({ ...editForm, qty: e.target.value })}
+                                  className="w-20 px-2 py-1 border rounded"
+                                />
+                              </td>
+                              <td className="p-4">
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => saveEdit(product.id)}
+                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                                    title="Guardar"
+                                  >
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={cancelEdit}
+                                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                                    title="Cancelar"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="p-4 font-mono text-sm">
+                                {product.upc || <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="p-4 font-semibold">
+                                {product.name}
+                              </td>
+                              <td className="p-4 font-mono">
+                                ${parseFloat(product.price).toFixed(2)}
+                              </td>
+                              <td className="p-4">
+                                <span className={`px-2 py-1 rounded-lg font-semibold ${
+                                  product.qty < 5
+                                    ? 'bg-red-100 text-red-800'
+                                    : product.qty < 20
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-green-100 text-green-800'
+                                }`}>
+                                  {product.qty}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => startEdit(product)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                                    title="Editar"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteProduct(product.id)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </>
+                          )}
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+                  )}
+                </tbody>
+              </table>
             </div>
 
-            {importResult && (
-              <div className="bg-gray-50 rounded-xl p-4">
-                <h3 className="font-semibold mb-2">Resultado de Importación</h3>
-                <p>Importados: {importResult.imported}</p>
-                <p>Errores: {importResult.errors}</p>
-                {importResult.preview && (
-                  <div className="mt-2">
-                    <p className="text-sm font-semibold">Vista Previa:</p>
-                    <pre className="text-xs bg-white p-2 rounded mt-1 overflow-x-auto">
-                      {JSON.stringify(importResult.preview, null, 2)}
-                    </pre>
-                  </div>
-                )}
+            {/* Load More */}
+            {offset < total && (
+              <div className="mt-6 text-center">
+                <Button
+                  variant="outline"
+                  onClick={() => loadProducts(false)}
+                  loading={loading}
+                >
+                  Cargar Más ({offset} de {total})
+                </Button>
               </div>
             )}
-
-            <div className="flex gap-2">
-              <Button
-                onClick={() => handleImport(true)}
-                loading={importing}
-                disabled={!importFile}
-                variant="outline"
-              >
-                Vista Previa
-              </Button>
-              <Button
-                onClick={() => handleImport(false)}
-                loading={importing}
-                disabled={!importFile}
-                icon={Upload}
-              >
-                Importar
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setMode('search')
-                  setImportFile(null)
-                  setImportResult(null)
-                }}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Search Box */}
-      {(mode === 'search' || mode === 'low') && (
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Scan className="w-5 h-5 text-primary-600" />
-              <span className="text-sm font-semibold text-gray-600 uppercase">
-                Buscar Productos
-              </span>
-            </div>
-            
-            {/* Botón de cámara para móviles */}
-            <Button
-              variant="outline"
-              icon={Camera}
-              onClick={() => fileInputCameraRef.current?.click()}
-              loading={isScanning}
-              className="md:hidden"
-            >
-              {isScanning ? '...' : 'Foto'}
-            </Button>
-          </div>
-          
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                ref={searchInputRef}
-                icon={Search}
-                placeholder="Escanea UPC o busca por nombre..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-              />
-            </div>
-            
-            {/* Botón de cámara para desktop */}
-            <Button
-              variant="outline"
-              icon={Camera}
-              onClick={() => fileInputCameraRef.current?.click()}
-              loading={isScanning}
-              className="hidden md:flex"
-            >
-              {isScanning ? 'Analizando...' : 'Tomar Foto'}
-            </Button>
-          </div>
-
-          <div className="mt-2 text-xs text-gray-500">
-            💡 Tip: Escanea con escáner físico (Enter) o toma foto del código con la cámara
-          </div>
-        </Card>
-      )}
-
-      {/* Products Table */}
-      {(mode === 'search' || mode === 'low') && (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">UPC</th>
-                  <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Producto</th>
-                  <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Precio</th>
-                  <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Stock</th>
-                  <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && products.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="text-center py-12">
-                      <div className="spinner mx-auto"></div>
-                    </td>
-                  </tr>
-                ) : products.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="text-center py-12 text-gray-500">
-                      <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                      <p>No hay productos</p>
-                    </td>
-                  </tr>
-                ) : (
-                  <AnimatePresence>
-                    {products.map((product) => (
-                      <motion.tr
-                        key={product.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="border-b border-gray-100 hover:bg-gray-50"
-                      >
-                        {editingId === product.id ? (
-                          <>
-                            <td className="p-4">
-                              <input
-                                type="text"
-                                value={editForm.upc}
-                                onChange={(e) => setEditForm({ ...editForm, upc: e.target.value })}
-                                className="w-full px-2 py-1 border rounded font-mono text-sm"
-                                placeholder="UPC"
-                              />
-                            </td>
-                            <td className="p-4">
-                              <input
-                                type="text"
-                                value={editForm.name}
-                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                            </td>
-                            <td className="p-4">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editForm.price}
-                                onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                                className="w-24 px-2 py-1 border rounded"
-                              />
-                            </td>
-                            <td className="p-4">
-                              <input
-                                type="number"
-                                value={editForm.qty}
-                                onChange={(e) => setEditForm({ ...editForm, qty: e.target.value })}
-                                className="w-20 px-2 py-1 border rounded"
-                              />
-                            </td>
-                            <td className="p-4">
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => saveEdit(product.id)}
-                                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                                  title="Guardar"
-                                >
-                                  <Check className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={cancelEdit}
-                                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                                  title="Cancelar"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td className="p-4 font-mono text-sm">
-                              {product.upc || <span className="text-gray-400">-</span>}
-                            </td>
-                            <td className="p-4 font-semibold">
-                              {product.name}
-                            </td>
-                            <td className="p-4 font-mono">
-                              ${parseFloat(product.price).toFixed(2)}
-                            </td>
-                            <td className="p-4">
-                              <span className={`px-2 py-1 rounded-lg font-semibold ${
-                                product.qty < 5
-                                  ? 'bg-red-100 text-red-800'
-                                  : product.qty < 20
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-green-100 text-green-800'
-                              }`}>
-                                {product.qty}
-                              </span>
-                            </td>
-                            <td className="p-4">
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => startEdit(product)}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                                  title="Editar"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => deleteProduct(product.id)}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </>
-                        )}
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Load More */}
-          {offset < total && (
-            <div className="mt-6 text-center">
-              <Button
-                variant="outline"
-                onClick={() => loadProducts(false)}
-                loading={loading}
-              >
-                Cargar Más ({offset} de {total})
-              </Button>
-            </div>
-          )}
-        </Card>
-      )}
+          </Card>
+        )}
+      </div>
     </div>
   )
 }
