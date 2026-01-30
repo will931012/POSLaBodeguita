@@ -427,7 +427,7 @@ export default function Inventory() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex sticky flex-wrap gap-2">
           <Button
             variant={mode === 'search' ? 'primary' : 'outline'}
             icon={Search}
