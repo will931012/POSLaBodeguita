@@ -12,6 +12,8 @@ import {
   Crown,
   ArrowUpRight,
   ArrowDownRight,
+  AlertTriangle,
+  Check,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
@@ -43,6 +45,13 @@ export default function AdminDashboard() {
   const [topProducts, setTopProducts] = useState([])
   const [timeline, setTimeline] = useState([])
   const [error, setError] = useState(null)
+  const [allPerfumes, setAllPerfumes] = useState([])
+  const [todaySales, setTodaySales] = useState({
+    count: 0,
+    revenue: 0,
+    perfumeCount: 0,
+    perfumeRevenue: 0
+  })
 
   // Calculate date range
   const getDateRange = (days) => {
@@ -117,7 +126,69 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadDashboard()
+    loadAllPerfumes()
+    loadTodaySales()
   }, [dateRange])
+
+  // Load all perfumes from inventory
+  const loadAllPerfumes = async () => {
+    try {
+      const res = await fetch(`${API}/api/products?q=perfume&limit=1000`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        // Filter only perfumes
+        const perfumes = data.rows.filter(p => 
+          p.category && p.category.toLowerCase().includes('perfume')
+        )
+        setAllPerfumes(perfumes)
+      }
+    } catch (error) {
+      console.error('Error loading all perfumes:', error)
+    }
+  }
+
+  // Load today's sales
+  const loadTodaySales = async () => {
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      
+      const params = new URLSearchParams({
+        startDate: today.toISOString(),
+        endDate: tomorrow.toISOString()
+      })
+
+      const [summaryRes, perfumeRes] = await Promise.all([
+        fetch(`${API}/api/analytics/dashboard-summary?${params}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`${API}/api/analytics/perfume-sales?${params}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ])
+
+      if (summaryRes.ok) {
+        const summary = await summaryRes.json()
+        const perfumeData = perfumeRes.ok ? await perfumeRes.json() : []
+        
+        const perfumeRevenue = perfumeData.reduce((sum, p) => sum + (parseFloat(p.revenue) || 0), 0)
+        
+        setTodaySales({
+          count: summary.totalSales || 0,
+          revenue: summary.totalRevenue || 0,
+          perfumeCount: perfumeData.length || 0,
+          perfumeRevenue: perfumeRevenue
+        })
+      }
+    } catch (error) {
+      console.error('Error loading today sales:', error)
+    }
+  }
 
   // Calculate perfume percentage
   const perfumePercentage = summary.totalRevenue > 0
@@ -197,6 +268,44 @@ export default function AdminDashboard() {
                 delay={0.3}
               />
             </div>
+
+            {/* Today's Sales Summary */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Ventas de Hoy</h2>
+                    <p className="text-sm text-gray-600">{new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-xl p-4">
+                    <p className="text-sm font-semibold text-gray-600 mb-1">Total Ventas</p>
+                    <p className="text-3xl font-bold text-blue-600">{todaySales.count}</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4">
+                    <p className="text-sm font-semibold text-gray-600 mb-1">Ingresos</p>
+                    <p className="text-3xl font-bold text-green-600">${(todaySales.revenue || 0).toFixed(2)}</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4">
+                    <p className="text-sm font-semibold text-gray-600 mb-1">Perfumes</p>
+                    <p className="text-3xl font-bold text-purple-600">{todaySales.perfumeCount}</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4">
+                    <p className="text-sm font-semibold text-gray-600 mb-1">Rev. Perfumes</p>
+                    <p className="text-3xl font-bold text-pink-600">${(todaySales.perfumeRevenue || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
 
             {/* Main Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -319,6 +428,102 @@ export default function AdminDashboard() {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* All Perfumes Inventory */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              <Card>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Inventario de Perfumes</h2>
+                      <p className="text-sm text-gray-600">{allPerfumes.length} perfumes en stock</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b-2 border-gray-200">
+                        <th className="text-left p-3 font-bold text-sm text-gray-600">UPC</th>
+                        <th className="text-left p-3 font-bold text-sm text-gray-600">Nombre</th>
+                        <th className="text-left p-3 font-bold text-sm text-gray-600">Categoría</th>
+                        <th className="text-left p-3 font-bold text-sm text-gray-600">Precio</th>
+                        <th className="text-left p-3 font-bold text-sm text-gray-600">Stock</th>
+                        <th className="text-left p-3 font-bold text-sm text-gray-600">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allPerfumes.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="text-center py-12 text-gray-500">
+                            <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                            <p>No hay perfumes en el inventario</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        allPerfumes.map((perfume) => (
+                          <tr key={perfume.id} className="border-b border-gray-100 hover:bg-purple-50 transition-colors">
+                            <td className="p-3 font-mono text-sm">
+                              {perfume.upc || <span className="text-gray-400">-</span>}
+                            </td>
+                            <td className="p-3 font-semibold">{perfume.name}</td>
+                            <td className="p-3">
+                              <span className="px-2 py-1 rounded-lg bg-purple-100 text-purple-700 text-sm font-medium">
+                                {perfume.category}
+                              </span>
+                            </td>
+                            <td className="p-3 font-mono font-bold text-gray-900">
+                              ${(parseFloat(perfume.price) || 0).toFixed(2)}
+                            </td>
+                            <td className="p-3">
+                              <span className={`px-3 py-1 rounded-lg font-bold ${
+                                (perfume.qty || 0) === 0 ? 'bg-red-100 text-red-800' :
+                                (perfume.qty || 0) < 5 ? 'bg-orange-100 text-orange-800' :
+                                (perfume.qty || 0) < 20 ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {perfume.qty || 0}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              {(perfume.qty || 0) === 0 ? (
+                                <span className="flex items-center gap-1 text-red-600 font-semibold">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  Agotado
+                                </span>
+                              ) : (perfume.qty || 0) < 5 ? (
+                                <span className="flex items-center gap-1 text-orange-600 font-semibold">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  Crítico
+                                </span>
+                              ) : (perfume.qty || 0) < 20 ? (
+                                <span className="flex items-center gap-1 text-yellow-600 font-semibold">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  Bajo
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-green-600 font-semibold">
+                                  <Check className="w-4 h-4" />
+                                  OK
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
