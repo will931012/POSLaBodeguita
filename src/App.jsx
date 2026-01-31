@@ -15,7 +15,7 @@ import Inventory from './pages/Inventory'
 import Receipts from './pages/Receipts'
 import CloseCash from './pages/CloseCash'
 import ProductLabel from './pages/ProductLabel'
-import AdminDashboard from './pages/AdminDashboard'
+import AdminDashboard from './pages/Admindashboard'
 import NotFound from './pages/NotFound'
 
 function AppRoutes() {
