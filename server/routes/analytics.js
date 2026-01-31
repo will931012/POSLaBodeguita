@@ -20,7 +20,7 @@ router.use(requireAdmin)
 router.get('/sales-by-category', async (req, res) => {
   try {
     const { startDate, endDate } = req.query
-    const locationId = req.location.id
+    const locationId = req.user.location_id
 
     let sql = `
       SELECT 
@@ -61,7 +61,7 @@ router.get('/sales-by-category', async (req, res) => {
 router.get('/perfume-sales', async (req, res) => {
   try {
     const { startDate, endDate } = req.query
-    const locationId = req.location.id
+    const locationId = req.user.location_id
 
     let sql = `
       SELECT 
@@ -111,7 +111,7 @@ router.get('/perfume-sales', async (req, res) => {
 router.get('/sales-timeline', async (req, res) => {
   try {
     const { startDate, endDate, category } = req.query
-    const locationId = req.location.id
+    const locationId = req.user.location_id
 
     let sql = `
       SELECT 
@@ -160,7 +160,7 @@ router.get('/sales-timeline', async (req, res) => {
 router.get('/top-products', async (req, res) => {
   try {
     const { limit = 10, category } = req.query
-    const locationId = req.location.id
+    const locationId = req.user.location_id
 
     let sql = `
       SELECT 
@@ -205,7 +205,7 @@ router.get('/top-products', async (req, res) => {
 router.get('/dashboard-summary', async (req, res) => {
   try {
     const { startDate, endDate } = req.query
-    const locationId = req.location.id
+    const locationId = req.user.location_id
 
     let dateFilter = ''
     const params = [locationId]
@@ -253,11 +253,11 @@ router.get('/dashboard-summary', async (req, res) => {
     ])
 
     res.json({
-      totalSales: parseInt(totalSales.rows[0].total_sales),
-      totalRevenue: parseFloat(totalSales.rows[0].total_revenue),
-      perfumeSales: parseInt(perfumeSales.rows[0].perfume_sales),
-      perfumeRevenue: parseFloat(perfumeSales.rows[0].perfume_revenue),
-      totalCategories: parseInt(categories.rows[0].total_categories)
+      totalSales: parseInt(totalSales.rows[0].total_sales) || 0,
+      totalRevenue: parseFloat(totalSales.rows[0].total_revenue) || 0,
+      perfumeSales: parseInt(perfumeSales.rows[0].perfume_sales) || 0,
+      perfumeRevenue: parseFloat(perfumeSales.rows[0].perfume_revenue) || 0,
+      totalCategories: parseInt(categories.rows[0].total_categories) || 0
     })
   } catch (error) {
     console.error('Dashboard summary error:', error)
