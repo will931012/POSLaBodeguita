@@ -211,7 +211,7 @@ router.get('/dashboard-summary', async (req, res) => {
     const params = [locationId]
 
     if (startDate && endDate) {
-      dateFilter = ` AND created_at BETWEEN $2 AND $3`
+      dateFilter = ` AND s.created_at BETWEEN $2 AND $3`
       params.push(startDate, endDate)
     }
 
