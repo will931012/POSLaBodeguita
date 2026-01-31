@@ -36,9 +36,9 @@ export default function Inventory() {
   const [searchQuery, setSearchQuery] = useState('')
   
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({ upc: '', name: '', price: 0, qty: 0 })
+  const [editForm, setEditForm] = useState({ upc: '', name: '', price: 0, qty: 0, category: '' })
   
-  const [addForm, setAddForm] = useState({ upc: '', name: '', price: '', qty: '' })
+  const [addForm, setAddForm] = useState({ upc: '', name: '', price: '', qty: '', category: '' })
   
   const [importFile, setImportFile] = useState(null)
   const [importResult, setImportResult] = useState(null)
@@ -255,12 +255,13 @@ export default function Inventory() {
       name: product.name,
       price: product.price,
       qty: product.qty,
+      category: product.category || '',
     })
   }
 
   const cancelEdit = () => {
     setEditingId(null)
-    setEditForm({ upc: '', name: '', price: 0, qty: 0 })
+    setEditForm({ upc: '', name: '', price: 0, qty: 0, category: '' })
   }
 
   const saveEdit = async (id) => {
@@ -349,6 +350,7 @@ export default function Inventory() {
           name: addForm.name,
           price: parseFloat(addForm.price),
           qty: parseInt(addForm.qty) || 0,
+          category: addForm.category || null,
         }),
       })
 
@@ -357,7 +359,7 @@ export default function Inventory() {
       const newProduct = await res.json()
       setProducts([newProduct, ...products])
       setTotal(total + 1)
-      setAddForm({ upc: '', name: '', price: '', qty: '' })
+      setAddForm({ upc: '', name: '', price: '', qty: '', category: '' })
       setMode('search')
       toast.success('Producto creado')
     } catch (error) {
@@ -474,6 +476,12 @@ export default function Inventory() {
                         <p className="text-xs text-gray-500 uppercase font-semibold">Producto</p>
                         <p className="text-gray-900 font-semibold">{duplicateProduct.name}</p>
                       </div>
+                      {duplicateProduct.category && (
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase font-semibold">Categoría</p>
+                          <p className="text-gray-900">{duplicateProduct.category}</p>
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
                         <div>
                           <p className="text-xs text-gray-500 uppercase font-semibold">Precio</p>
@@ -600,6 +608,12 @@ export default function Inventory() {
                   value={addForm.name}
                   onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                   required
+                />
+                <Input
+                  label="Categoría"
+                  placeholder="Bebidas, Snacks, etc."
+                  value={addForm.category}
+                  onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
                 />
                 <Input
                   label="Precio *"
@@ -763,6 +777,7 @@ export default function Inventory() {
                   <tr className="border-b-2 border-gray-200">
                     <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">UPC</th>
                     <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Producto</th>
+                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Categoría</th>
                     <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Precio</th>
                     <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Stock</th>
                     <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Acciones</th>
@@ -771,13 +786,13 @@ export default function Inventory() {
                 <tbody>
                   {loading && products.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-12">
+                      <td colSpan="6" className="text-center py-12">
                         <div className="spinner mx-auto"></div>
                       </td>
                     </tr>
                   ) : products.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-12 text-gray-500">
+                      <td colSpan="6" className="text-center py-12 text-gray-500">
                         <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
                         <p>No hay productos</p>
                       </td>
@@ -809,6 +824,15 @@ export default function Inventory() {
                                   value={editForm.name}
                                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                                   className="w-full px-2 py-1 border rounded"
+                                />
+                              </td>
+                              <td className="p-4">
+                                <input
+                                  type="text"
+                                  value={editForm.category}
+                                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                                  className="w-full px-2 py-1 border rounded"
+                                  placeholder="Categoría"
                                 />
                               </td>
                               <td className="p-4">
@@ -854,6 +878,15 @@ export default function Inventory() {
                               </td>
                               <td className="p-4 font-semibold">
                                 {product.name}
+                              </td>
+                              <td className="p-4">
+                                {product.category ? (
+                                  <span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium">
+                                    {product.category}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
                               </td>
                               <td className="p-4 font-mono">
                                 ${parseFloat(product.price).toFixed(2)}

@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
     const params = [locationId]
 
     if (q) {
-      sql += ` AND (name ILIKE $${params.length + 1} OR upc ILIKE $${params.length + 1})`
+      sql += ` AND (name ILIKE $${params.length + 1} OR upc ILIKE $${params.length + 1} OR category ILIKE $${params.length + 1})`
       params.push(`%${q}%`)
     }
 
@@ -51,17 +51,17 @@ router.get('/', async (req, res) => {
 // ============================================
 router.post('/', async (req, res) => {
   try {
-    const { upc, name, price, qty, shared } = req.body
+    const { upc, name, price, qty, category, shared } = req.body
     
     // TODOS los productos son compartidos por defecto
     // location_id = NULL significa que todas las ubicaciones lo ven
     const locationId = null
     
     const result = await query(
-      `INSERT INTO products (upc, name, price, qty, location_id) 
-       VALUES ($1, $2, $3, $4, $5) 
+      `INSERT INTO products (upc, name, price, qty, category, location_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
-      [upc || null, name, price, qty, locationId]
+      [upc || null, name, price, qty, category || null, locationId]
     )
 
     res.json(result.rows[0])
@@ -77,14 +77,14 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { upc, name, price, qty } = req.body
+    const { upc, name, price, qty, category } = req.body
 
     const result = await query(
       `UPDATE products 
-       SET upc = $1, name = $2, price = $3, qty = $4, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
+       SET upc = $1, name = $2, price = $3, qty = $4, category = $5, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6
        RETURNING *`,
-      [upc || null, name, price, qty, id]
+      [upc || null, name, price, qty, category || null, id]
     )
 
     if (result.rows.length === 0) {
