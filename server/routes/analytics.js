@@ -20,7 +20,7 @@ router.use(requireAdmin)
 router.get('/sales-by-category', async (req, res) => {
   try {
     const { startDate, endDate } = req.query
-    const locationId = req.user.location_id
+    const locationId = req.location.id
 
     let sql = `
       SELECT 
@@ -61,7 +61,7 @@ router.get('/sales-by-category', async (req, res) => {
 router.get('/perfume-sales', async (req, res) => {
   try {
     const { startDate, endDate } = req.query
-    const locationId = req.user.location_id
+    const locationId = req.location.id
 
     let sql = `
       SELECT 
@@ -111,7 +111,7 @@ router.get('/perfume-sales', async (req, res) => {
 router.get('/sales-timeline', async (req, res) => {
   try {
     const { startDate, endDate, category } = req.query
-    const locationId = req.user.location_id
+    const locationId = req.location.id
 
     let sql = `
       SELECT 
@@ -160,7 +160,7 @@ router.get('/sales-timeline', async (req, res) => {
 router.get('/top-products', async (req, res) => {
   try {
     const { limit = 10, category } = req.query
-    const locationId = req.user.location_id
+    const locationId = req.location.id
 
     let sql = `
       SELECT 
@@ -205,7 +205,19 @@ router.get('/top-products', async (req, res) => {
 router.get('/dashboard-summary', async (req, res) => {
   try {
     const { startDate, endDate } = req.query
-    const locationId = req.user.location_id
+    const locationId = req.location?.id
+
+    console.log('📊 Dashboard Summary Request:', {
+      locationId,
+      startDate,
+      endDate,
+      user: req.user,
+      location: req.location
+    })
+
+    if (!locationId) {
+      return res.status(400).json({ error: 'Location ID not found' })
+    }
 
     let dateFilter = ''
     const params = [locationId]
@@ -222,7 +234,7 @@ router.get('/dashboard-summary', async (req, res) => {
         COALESCE(SUM(total), 0) as total_revenue
       FROM sales 
       WHERE (location_id = $1 OR location_id IS NULL)
-      ${dateFilter}
+      ${startDate && endDate ? ' AND created_at BETWEEN $2 AND $3' : ''}
     `
 
     // Perfume sales
@@ -234,7 +246,7 @@ router.get('/dashboard-summary', async (req, res) => {
       JOIN sale_items si ON s.id = si.sale_id
       JOIN products p ON si.product_id = p.id
       WHERE (s.location_id = $1 OR s.location_id IS NULL)
-        AND p.category ILIKE '%perfume%'
+        AND (p.category ILIKE '%perfume%' OR p.category ILIKE '%fragancia%')
       ${dateFilter}
     `
 
@@ -246,22 +258,42 @@ router.get('/dashboard-summary', async (req, res) => {
         AND (location_id = $1 OR location_id IS NULL)
     `
 
+    console.log('🔍 Executing queries...')
+
     const [totalSales, perfumeSales, categories] = await Promise.all([
-      query(totalSalesQuery, params),
-      query(perfumeSalesQuery, params),
-      query(categoriesQuery, [locationId])
+      query(totalSalesQuery, params).catch(err => {
+        console.error('❌ Total sales query error:', err)
+        throw err
+      }),
+      query(perfumeSalesQuery, params).catch(err => {
+        console.error('❌ Perfume sales query error:', err)
+        throw err
+      }),
+      query(categoriesQuery, [locationId]).catch(err => {
+        console.error('❌ Categories query error:', err)
+        throw err
+      })
     ])
 
+    console.log('✅ Queries successful:', {
+      totalSales: totalSales.rows[0],
+      perfumeSales: perfumeSales.rows[0],
+      categories: categories.rows[0]
+    })
+
     res.json({
-      totalSales: parseInt(totalSales.rows[0].total_sales) || 0,
-      totalRevenue: parseFloat(totalSales.rows[0].total_revenue) || 0,
-      perfumeSales: parseInt(perfumeSales.rows[0].perfume_sales) || 0,
-      perfumeRevenue: parseFloat(perfumeSales.rows[0].perfume_revenue) || 0,
-      totalCategories: parseInt(categories.rows[0].total_categories) || 0
+      totalSales: parseInt(totalSales.rows[0]?.total_sales) || 0,
+      totalRevenue: parseFloat(totalSales.rows[0]?.total_revenue) || 0,
+      perfumeSales: parseInt(perfumeSales.rows[0]?.perfume_sales) || 0,
+      perfumeRevenue: parseFloat(perfumeSales.rows[0]?.perfume_revenue) || 0,
+      totalCategories: parseInt(categories.rows[0]?.total_categories) || 0
     })
   } catch (error) {
-    console.error('Dashboard summary error:', error)
-    res.status(500).json({ error: error.message })
+    console.error('❌ Dashboard summary error:', error)
+    res.status(500).json({ 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    })
   }
 })
 
