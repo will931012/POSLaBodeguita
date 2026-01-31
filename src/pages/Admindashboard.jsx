@@ -42,6 +42,7 @@ export default function AdminDashboard() {
   const [perfumeProducts, setPerfumeProducts] = useState([])
   const [topProducts, setTopProducts] = useState([])
   const [timeline, setTimeline] = useState([])
+  const [error, setError] = useState(null)
 
   // Calculate date range
   const getDateRange = (days) => {
@@ -58,6 +59,7 @@ export default function AdminDashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
+      setError(null)
       const { startDate, endDate } = getDateRange(dateRange)
       const params = new URLSearchParams({ startDate, endDate })
 
@@ -79,20 +81,35 @@ export default function AdminDashboard() {
         })
       ])
 
-      const summaryData = await summaryRes.json()
-      const categoryList = await categoryRes.json()
-      const perfumeList = await perfumeRes.json()
-      const topList = await topRes.json()
-      const timelineData = await timelineRes.json()
+      // Check for errors
+      if (!summaryRes.ok) {
+        const errorData = await summaryRes.json()
+        throw new Error(errorData.error || 'Error al cargar resumen')
+      }
 
-      setSummary(summaryData)
+      const summaryData = await summaryRes.json()
+      const categoryList = categoryRes.ok ? await categoryRes.json() : []
+      const perfumeList = perfumeRes.ok ? await perfumeRes.json() : []
+      const topList = topRes.ok ? await topRes.json() : []
+      const timelineData = timelineRes.ok ? await timelineRes.json() : []
+
+      // Ensure summary has all required fields with defaults
+      setSummary({
+        totalSales: summaryData.totalSales || 0,
+        totalRevenue: summaryData.totalRevenue || 0,
+        perfumeSales: summaryData.perfumeSales || 0,
+        perfumeRevenue: summaryData.perfumeRevenue || 0,
+        totalCategories: summaryData.totalCategories || 0
+      })
+      
       setCategoryData(categoryList)
       setPerfumeProducts(perfumeList)
       setTopProducts(topList)
       setTimeline(timelineData)
     } catch (error) {
       console.error('Dashboard load error:', error)
-      toast.error('Error al cargar datos del dashboard')
+      setError(error.message)
+      toast.error(error.message || 'Error al cargar datos del dashboard')
     } finally {
       setLoading(false)
     }
@@ -153,21 +170,21 @@ export default function AdminDashboard() {
               <StatCard
                 icon={ShoppingBag}
                 label="Total Ventas"
-                value={summary.totalSales}
+                value={summary.totalSales || 0}
                 color="purple"
                 delay={0}
               />
               <StatCard
                 icon={DollarSign}
                 label="Ingresos Totales"
-                value={`$${summary.totalRevenue.toFixed(2)}`}
+                value={`$${(summary.totalRevenue || 0).toFixed(2)}`}
                 color="green"
                 delay={0.1}
               />
               <StatCard
                 icon={Sparkles}
                 label="Ventas de Perfumes"
-                value={summary.perfumeSales}
+                value={summary.perfumeSales || 0}
                 color="pink"
                 delay={0.2}
                 badge={`${perfumePercentage}%`}
@@ -175,7 +192,7 @@ export default function AdminDashboard() {
               <StatCard
                 icon={TrendingUp}
                 label="Ingresos Perfumes"
-                value={`$${summary.perfumeRevenue.toFixed(2)}`}
+                value={`$${(summary.perfumeRevenue || 0).toFixed(2)}`}
                 color="amber"
                 delay={0.3}
               />
@@ -287,17 +304,17 @@ export default function AdminDashboard() {
                               {product.category || 'Sin categoría'}
                             </span>
                           </td>
-                          <td className="p-3 font-mono">{product.units_sold}</td>
+                          <td className="p-3 font-mono">{product.units_sold || 0}</td>
                           <td className="p-3 font-mono font-bold text-green-600">
-                            ${parseFloat(product.revenue).toFixed(2)}
+                            ${(parseFloat(product.revenue) || 0).toFixed(2)}
                           </td>
                           <td className="p-3">
                             <span className={`px-2 py-1 rounded-lg font-semibold ${
-                              product.current_stock < 5 ? 'bg-red-100 text-red-800' :
-                              product.current_stock < 20 ? 'bg-yellow-100 text-yellow-800' :
+                              (product.current_stock || 0) < 5 ? 'bg-red-100 text-red-800' :
+                              (product.current_stock || 0) < 20 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-green-100 text-green-800'
                             }`}>
-                              {product.current_stock}
+                              {product.current_stock || 0}
                             </span>
                           </td>
                         </tr>
@@ -355,7 +372,8 @@ function StatCard({ icon: Icon, label, value, color, delay, badge }) {
 // Perfume Row Component
 function PerfumeRow({ product, rank }) {
   const maxRevenue = 1000 // You can calculate this from the data
-  const percentage = Math.min((product.revenue / maxRevenue) * 100, 100)
+  const revenue = parseFloat(product.revenue) || 0
+  const percentage = Math.min((revenue / maxRevenue) * 100, 100)
 
   return (
     <div className="p-4 rounded-xl bg-white border border-purple-100 hover:border-purple-300 transition-all">
@@ -368,12 +386,12 @@ function PerfumeRow({ product, rank }) {
           </span>
           <div>
             <p className="font-semibold text-gray-900">{product.name}</p>
-            <p className="text-xs text-gray-500">Stock: {product.current_stock}</p>
+            <p className="text-xs text-gray-500">Stock: {product.current_stock || 0}</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="font-bold text-lg text-purple-600">${parseFloat(product.revenue).toFixed(2)}</p>
-          <p className="text-xs text-gray-500">{product.units_sold} vendidas</p>
+          <p className="font-bold text-lg text-purple-600">${revenue.toFixed(2)}</p>
+          <p className="text-xs text-gray-500">{product.units_sold || 0} vendidas</p>
         </div>
       </div>
       
@@ -392,6 +410,8 @@ function PerfumeRow({ product, rank }) {
 
 // Category Row Component
 function CategoryRow({ category }) {
+  const revenue = parseFloat(category.total_revenue) || 0
+  
   return (
     <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
       <div className="flex items-center gap-3">
@@ -400,12 +420,12 @@ function CategoryRow({ category }) {
         </div>
         <div>
           <p className="font-semibold text-gray-900">{category.category}</p>
-          <p className="text-xs text-gray-500">{category.total_units} unidades</p>
+          <p className="text-xs text-gray-500">{category.total_units || 0} unidades</p>
         </div>
       </div>
       <div className="text-right">
-        <p className="font-bold text-green-600">${parseFloat(category.total_revenue).toFixed(2)}</p>
-        <p className="text-xs text-gray-500">{category.total_sales} ventas</p>
+        <p className="font-bold text-green-600">${revenue.toFixed(2)}</p>
+        <p className="text-xs text-gray-500">{category.total_sales || 0} ventas</p>
       </div>
     </div>
   )
