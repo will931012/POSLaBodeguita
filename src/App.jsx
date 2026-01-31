@@ -15,6 +15,7 @@ import Inventory from './pages/Inventory'
 import Receipts from './pages/Receipts'
 import CloseCash from './pages/CloseCash'
 import ProductLabel from './pages/ProductLabel'
+import AdminDashboard from './pages/AdminDashboard'
 import NotFound from './pages/NotFound'
 
 function AppRoutes() {
@@ -79,6 +80,16 @@ function AppRoutes() {
           element={
             <ProtectedRoute roles={['admin', 'manager']}>
               <ProductLabel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Dashboard - admin only */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />
