@@ -79,7 +79,7 @@ try {
   process.exit(1)
 }
 
-let productsRouter, salesRouter, receiptsRouter, reportsRouter, importRouter
+let productsRouter, salesRouter, receiptsRouter, reportsRouter, importRouter, analyticsRouter
 
 try {
   productsRouter = require('./routes/products')
@@ -87,6 +87,7 @@ try {
   receiptsRouter = require('./routes/receipts')
   reportsRouter = require('./routes/reports')
   importRouter = require('./routes/import')
+  analyticsRouter = require('./routes/analytics')
   console.log('✅ All routes loaded')
 } catch (error) {
   console.error('❌ ERROR loading routes:', error.message)
@@ -108,6 +109,9 @@ app.use('/report', verifyToken, reportsRouter)
 
 // Admin/Manager only
 app.use('/api/import', verifyToken, requireRole(['admin', 'manager']), importRouter)
+
+// Admin only - Analytics Dashboard
+app.use('/api/analytics', verifyToken, analyticsRouter)
 
 // Health check
 app.get('/api/health', (req, res) => {
