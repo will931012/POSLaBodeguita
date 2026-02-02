@@ -13,12 +13,12 @@ import { toast } from 'sonner'
 import { Navigate } from 'react-router-dom'
 
 // Components
-import StatCard from '@/components/admin/StatCard'
-import TodaySales from '@/components/admin/TodaySales'
-import PerfumeSalesSection from '@/components/admin/PerfumeSalesSection'
-import CategoriesSection from '@/components/admin/CategoriesSection'
-import TopProductsTable from '@/components/admin/TopProductsTable'
-import PerfumesInventory from '@/components/admin/PerfumesInventory'
+import StatCard from '@/components/admin/StatCard.jsx'
+import TodaySales from '@/components/admin/TodaySales.jsx'
+import PerfumeSalesSection from '@/components/admin/PerfumeSalesSection.jsx'
+import CategoriesSection from '@/components/admin/CategoriesSection.jsx'
+import TopProductsTable from '@/components/admin/TopProductsTable.jsx'
+import PerfumesInventory from '@/components/admin/PerfumesInventory.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
