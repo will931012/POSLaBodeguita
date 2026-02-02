@@ -3,23 +3,22 @@ import { motion } from 'framer-motion'
 import {
   TrendingUp,
   DollarSign,
-  Package,
   ShoppingBag,
   Sparkles,
-  BarChart3,
   Calendar,
-  Filter,
   Crown,
-  ArrowUpRight,
-  ArrowDownRight,
-  AlertTriangle,
-  Check,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
-import Card from '@components/Card'
-import Button from '@components/Button'
 import { Navigate } from 'react-router-dom'
+
+// Components
+import StatCard from '@/components/admin/StatCard'
+import TodaySales from '@/components/admin/TodaySales'
+import PerfumeSalesSection from '@/components/admin/PerfumeSalesSection'
+import CategoriesSection from '@/components/admin/CategoriesSection'
+import TopProductsTable from '@/components/admin/TopProductsTable'
+import PerfumesInventory from '@/components/admin/PerfumesInventory'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -32,7 +31,7 @@ export default function AdminDashboard() {
   }
 
   const [loading, setLoading] = useState(true)
-  const [dateRange, setDateRange] = useState('30') // days
+  const [dateRange, setDateRange] = useState('30')
   const [summary, setSummary] = useState({
     totalSales: 0,
     totalRevenue: 0,
@@ -43,8 +42,6 @@ export default function AdminDashboard() {
   const [categoryData, setCategoryData] = useState([])
   const [perfumeProducts, setPerfumeProducts] = useState([])
   const [topProducts, setTopProducts] = useState([])
-  const [timeline, setTimeline] = useState([])
-  const [error, setError] = useState(null)
   const [allPerfumes, setAllPerfumes] = useState([])
   const [todaySales, setTodaySales] = useState({
     count: 0,
@@ -68,11 +65,10 @@ export default function AdminDashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
-      setError(null)
       const { startDate, endDate } = getDateRange(dateRange)
       const params = new URLSearchParams({ startDate, endDate })
 
-      const [summaryRes, categoryRes, perfumeRes, topRes, timelineRes] = await Promise.all([
+      const [summaryRes, categoryRes, perfumeRes, topRes] = await Promise.all([
         fetch(`${API}/api/analytics/dashboard-summary?${params}`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
@@ -84,13 +80,9 @@ export default function AdminDashboard() {
         }),
         fetch(`${API}/api/analytics/top-products?limit=5&${params}`, {
           headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${API}/api/analytics/sales-timeline?category=perfume&${params}`, {
-          headers: { Authorization: `Bearer ${token}` }
         })
       ])
 
-      // Check for errors
       if (!summaryRes.ok) {
         const errorData = await summaryRes.json()
         throw new Error(errorData.error || 'Error al cargar resumen')
@@ -100,9 +92,7 @@ export default function AdminDashboard() {
       const categoryList = categoryRes.ok ? await categoryRes.json() : []
       const perfumeList = perfumeRes.ok ? await perfumeRes.json() : []
       const topList = topRes.ok ? await topRes.json() : []
-      const timelineData = timelineRes.ok ? await timelineRes.json() : []
 
-      // Ensure summary has all required fields with defaults
       setSummary({
         totalSales: summaryData.totalSales || 0,
         totalRevenue: summaryData.totalRevenue || 0,
@@ -114,21 +104,13 @@ export default function AdminDashboard() {
       setCategoryData(categoryList)
       setPerfumeProducts(perfumeList)
       setTopProducts(topList)
-      setTimeline(timelineData)
     } catch (error) {
       console.error('Dashboard load error:', error)
-      setError(error.message)
       toast.error(error.message || 'Error al cargar datos del dashboard')
     } finally {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    loadDashboard()
-    loadAllPerfumes()
-    loadTodaySales()
-  }, [dateRange])
 
   // Load all perfumes from inventory
   const loadAllPerfumes = async () => {
@@ -139,7 +121,6 @@ export default function AdminDashboard() {
       
       if (res.ok) {
         const data = await res.json()
-        // Filter only perfumes
         const perfumes = data.rows.filter(p => 
           p.category && p.category.toLowerCase().includes('perfume')
         )
@@ -190,7 +171,12 @@ export default function AdminDashboard() {
     }
   }
 
-  // Calculate perfume percentage
+  useEffect(() => {
+    loadDashboard()
+    loadAllPerfumes()
+    loadTodaySales()
+  }, [dateRange])
+
   const perfumePercentage = summary.totalRevenue > 0
     ? (summary.perfumeRevenue / summary.totalRevenue * 100).toFixed(1)
     : 0
@@ -269,368 +255,22 @@ export default function AdminDashboard() {
               />
             </div>
 
-            {/* Today's Sales Summary */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Ventas de Hoy</h2>
-                    <p className="text-sm text-gray-600">{new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl p-4">
-                    <p className="text-sm font-semibold text-gray-600 mb-1">Total Ventas</p>
-                    <p className="text-3xl font-bold text-blue-600">{todaySales.count}</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4">
-                    <p className="text-sm font-semibold text-gray-600 mb-1">Ingresos</p>
-                    <p className="text-3xl font-bold text-green-600">${(todaySales.revenue || 0).toFixed(2)}</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4">
-                    <p className="text-sm font-semibold text-gray-600 mb-1">Perfumes</p>
-                    <p className="text-3xl font-bold text-purple-600">{todaySales.perfumeCount}</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4">
-                    <p className="text-sm font-semibold text-gray-600 mb-1">Rev. Perfumes</p>
-                    <p className="text-3xl font-bold text-pink-600">${(todaySales.perfumeRevenue || 0).toFixed(2)}</p>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
+            {/* Today's Sales */}
+            <TodaySales todaySales={todaySales} />
 
             {/* Main Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Perfume Sales - Featured */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="lg:col-span-2"
-              >
-                <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Perfumes más Vendidos</h2>
-                      <p className="text-sm text-gray-600">Rendimiento por producto</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {perfumeProducts.length === 0 ? (
-                      <p className="text-center py-8 text-gray-500">No hay datos de perfumes</p>
-                    ) : (
-                      perfumeProducts.slice(0, 10).map((product, index) => (
-                        <PerfumeRow key={product.id} product={product} rank={index + 1} />
-                      ))
-                    )}
-                  </div>
-                </Card>
-              </motion.div>
-
-              {/* Categories */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Card>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-amber-600 flex items-center justify-center">
-                      <BarChart3 className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">Por Categoría</h2>
-                      <p className="text-sm text-gray-600">Ingresos totales</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {categoryData.map((cat, index) => (
-                      <CategoryRow key={index} category={cat} />
-                    ))}
-                  </div>
-                </Card>
-              </motion.div>
+              <PerfumeSalesSection perfumeProducts={perfumeProducts} />
+              <CategoriesSection categoryData={categoryData} />
             </div>
 
-            {/* Top Products Overall */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              <Card>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-green-600 flex items-center justify-center">
-                    <Crown className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Top 5 Productos (Todas las Categorías)</h2>
-                    <p className="text-sm text-gray-600">Mejores vendedores del periodo</p>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 border-gray-200">
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">#</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Producto</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Categoría</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Vendidas</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Ingresos</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Stock</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topProducts.map((product, index) => (
-                        <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3">
-                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${
-                              index === 0 ? 'bg-amber-100 text-amber-800' :
-                              index === 1 ? 'bg-gray-100 text-gray-800' :
-                              index === 2 ? 'bg-orange-100 text-orange-800' :
-                              'bg-blue-50 text-blue-800'
-                            }`}>
-                              {index + 1}
-                            </span>
-                          </td>
-                          <td className="p-3 font-semibold">{product.name}</td>
-                          <td className="p-3">
-                            <span className="px-2 py-1 rounded-lg bg-purple-50 text-purple-700 text-sm font-medium">
-                              {product.category || 'Sin categoría'}
-                            </span>
-                          </td>
-                          <td className="p-3 font-mono">{product.units_sold || 0}</td>
-                          <td className="p-3 font-mono font-bold text-green-600">
-                            ${(parseFloat(product.revenue) || 0).toFixed(2)}
-                          </td>
-                          <td className="p-3">
-                            <span className={`px-2 py-1 rounded-lg font-semibold ${
-                              (product.current_stock || 0) < 5 ? 'bg-red-100 text-red-800' :
-                              (product.current_stock || 0) < 20 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {product.current_stock || 0}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </motion.div>
+            {/* Top Products */}
+            <TopProductsTable topProducts={topProducts} />
 
             {/* All Perfumes Inventory */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-            >
-              <Card>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Inventario de Perfumes</h2>
-                      <p className="text-sm text-gray-600">{allPerfumes.length} perfumes en stock</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 border-gray-200">
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">UPC</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Nombre</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Categoría</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Precio</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Stock</th>
-                        <th className="text-left p-3 font-bold text-sm text-gray-600">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allPerfumes.length === 0 ? (
-                        <tr>
-                          <td colSpan="6" className="text-center py-12 text-gray-500">
-                            <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                            <p>No hay perfumes en el inventario</p>
-                          </td>
-                        </tr>
-                      ) : (
-                        allPerfumes.map((perfume) => (
-                          <tr key={perfume.id} className="border-b border-gray-100 hover:bg-purple-50 transition-colors">
-                            <td className="p-3 font-mono text-sm">
-                              {perfume.upc || <span className="text-gray-400">-</span>}
-                            </td>
-                            <td className="p-3 font-semibold">{perfume.name}</td>
-                            <td className="p-3">
-                              <span className="px-2 py-1 rounded-lg bg-purple-100 text-purple-700 text-sm font-medium">
-                                {perfume.category}
-                              </span>
-                            </td>
-                            <td className="p-3 font-mono font-bold text-gray-900">
-                              ${(parseFloat(perfume.price) || 0).toFixed(2)}
-                            </td>
-                            <td className="p-3">
-                              <span className={`px-3 py-1 rounded-lg font-bold ${
-                                (perfume.qty || 0) === 0 ? 'bg-red-100 text-red-800' :
-                                (perfume.qty || 0) < 5 ? 'bg-orange-100 text-orange-800' :
-                                (perfume.qty || 0) < 20 ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {perfume.qty || 0}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              {(perfume.qty || 0) === 0 ? (
-                                <span className="flex items-center gap-1 text-red-600 font-semibold">
-                                  <AlertTriangle className="w-4 h-4" />
-                                  Agotado
-                                </span>
-                              ) : (perfume.qty || 0) < 5 ? (
-                                <span className="flex items-center gap-1 text-orange-600 font-semibold">
-                                  <AlertTriangle className="w-4 h-4" />
-                                  Crítico
-                                </span>
-                              ) : (perfume.qty || 0) < 20 ? (
-                                <span className="flex items-center gap-1 text-yellow-600 font-semibold">
-                                  <AlertTriangle className="w-4 h-4" />
-                                  Bajo
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-1 text-green-600 font-semibold">
-                                  <Check className="w-4 h-4" />
-                                  OK
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </motion.div>
+            <PerfumesInventory allPerfumes={allPerfumes} />
           </>
         )}
-      </div>
-    </div>
-  )
-}
-
-// Stat Card Component
-function StatCard({ icon: Icon, label, value, color, delay, badge }) {
-  const colors = {
-    purple: 'from-purple-500 to-purple-600',
-    green: 'from-green-500 to-green-600',
-    pink: 'from-pink-500 to-pink-600',
-    amber: 'from-amber-500 to-amber-600',
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-    >
-      <Card className="relative overflow-hidden">
-        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${colors[color]} opacity-10 rounded-full -mr-16 -mt-16`} />
-        
-        <div className="relative">
-          <div className="flex items-center justify-between mb-3">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center shadow-lg`}>
-              <Icon className="w-6 h-6 text-white" />
-            </div>
-            {badge && (
-              <span className="px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-bold">
-                {badge}
-              </span>
-            )}
-          </div>
-          
-          <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">{label}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
-        </div>
-      </Card>
-    </motion.div>
-  )
-}
-
-// Perfume Row Component
-function PerfumeRow({ product, rank }) {
-  const maxRevenue = 1000 // You can calculate this from the data
-  const revenue = parseFloat(product.revenue) || 0
-  const percentage = Math.min((revenue / maxRevenue) * 100, 100)
-
-  return (
-    <div className="p-4 rounded-xl bg-white border border-purple-100 hover:border-purple-300 transition-all">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <span className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
-            rank <= 3 ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white' : 'bg-gray-100 text-gray-700'
-          }`}>
-            {rank}
-          </span>
-          <div>
-            <p className="font-semibold text-gray-900">{product.name}</p>
-            <p className="text-xs text-gray-500">Stock: {product.current_stock || 0}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="font-bold text-lg text-purple-600">${revenue.toFixed(2)}</p>
-          <p className="text-xs text-gray-500">{product.units_sold || 0} vendidas</p>
-        </div>
-      </div>
-      
-      {/* Revenue bar */}
-      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
-          transition={{ duration: 1, delay: rank * 0.1 }}
-          className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
-        />
-      </div>
-    </div>
-  )
-}
-
-// Category Row Component
-function CategoryRow({ category }) {
-  const revenue = parseFloat(category.total_revenue) || 0
-  
-  return (
-    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-          <Package className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <p className="font-semibold text-gray-900">{category.category}</p>
-          <p className="text-xs text-gray-500">{category.total_units || 0} unidades</p>
-        </div>
-      </div>
-      <div className="text-right">
-        <p className="font-bold text-green-600">${revenue.toFixed(2)}</p>
-        <p className="text-xs text-gray-500">{category.total_sales || 0} ventas</p>
       </div>
     </div>
   )
