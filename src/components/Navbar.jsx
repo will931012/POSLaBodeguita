@@ -26,7 +26,7 @@ export default function Navbar() {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [] },
-    { path: '/sales', label: 'Caja', icon: ShoppingCart, roles: [] },
+    { path: '/caja', label: 'Caja', icon: ShoppingCart, roles: [] },
     { path: '/inventory', label: 'Inventario', icon: Package, roles: ['admin', 'manager'] },
     { path: '/receipts', label: 'Recibos', icon: Receipt, roles: [] },
     { path: '/close', label: 'Cierre', icon: DollarSign, roles: ['admin', 'manager'] },
