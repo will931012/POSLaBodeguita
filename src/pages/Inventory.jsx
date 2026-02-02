@@ -1,64 +1,77 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search,
   Plus,
-  Edit2,
-  Trash2,
-  Package,
   Upload,
   Download,
   AlertTriangle,
-  Check,
-  X,
-  Printer,
-  FileSpreadsheet,
-  Scan,
-  Camera,
 } from 'lucide-react'
 import Button from '@components/Button'
-import Card from '@components/Card'
-import Input from '@components/Input'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 import { Html5Qrcode } from 'html5-qrcode'
+
+// Components
+import DuplicateProductModal from '@/components/inventory/DuplicateProductModal'
+import AddProductForm from '@/components/inventory/AddProductForm'
+import ImportCSVForm from '@/components/inventory/ImportCSVForm'
+import SearchBar from '@/components/inventory/SearchBar'
+import ProductsTable from '@/components/inventory/ProductsTable'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const PAGE_SIZE = 50
 
 export default function Inventory() {
   const { token } = useAuth()
+  
+  // UI State
   const [mode, setMode] = useState('search')
+  const [loading, setLoading] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  
+  // Products State
   const [products, setProducts] = useState([])
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
-  const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   
+  // Edit State
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({ upc: '', name: '', price: 0, qty: 0, category: '' })
+  const [editForm, setEditForm] = useState({ 
+    upc: '', 
+    name: '', 
+    price: 0, 
+    qty: 0, 
+    category: '' 
+  })
   
-  const [addForm, setAddForm] = useState({ upc: '', name: '', price: '', qty: '', category: '' })
+  // Add State
+  const [addForm, setAddForm] = useState({ 
+    upc: '', 
+    name: '', 
+    price: '', 
+    qty: '', 
+    category: '' 
+  })
   
+  // Import State
   const [importFile, setImportFile] = useState(null)
   const [importResult, setImportResult] = useState(null)
   const [importing, setImporting] = useState(false)
   
-  // Camera scanner
-  const [isScanning, setIsScanning] = useState(false)
-  
-  // Modal for duplicate UPC
+  // Modal State
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateProduct, setDuplicateProduct] = useState(null)
   
+  // Refs
   const fileInputRef = useRef(null)
   const searchTimerRef = useRef(null)
   const searchInputRef = useRef(null)
   const fileInputCameraRef = useRef(null)
-  const skipReloadRef = useRef(false) // Flag para evitar recarga después de escaneo
+  const skipReloadRef = useRef(false)
 
   // ============================================
-  // NATIVE CAMERA SCANNER
+  // CAMERA SCANNER
   // ============================================
   const handleNativeCameraCapture = async (e) => {
     const file = e.target.files?.[0]
@@ -68,90 +81,53 @@ export default function Inventory() {
       setIsScanning(true)
       toast.info('Analizando imagen...')
       
-      console.log('📷 Procesando imagen:', file.name)
-      
-      // Crear instancia de Html5Qrcode para escanear archivo
       const html5QrCode = new Html5Qrcode("temp-file-scanner")
       
       try {
-        // Escanear el archivo de imagen
         const decodedText = await html5QrCode.scanFile(file, false)
-        console.log('✅ Código detectado:', decodedText)
         
-        // Vibrar si está disponible
-        if (navigator.vibrate) {
-          navigator.vibrate(200)
-        }
+        if (navigator.vibrate) navigator.vibrate(200)
         
-        // Buscar producto por UPC
         const found = await searchProductByUPC(decodedText)
-        
-        if (found) {
-          toast.success('¡Producto encontrado!')
-        }
-        
-      } catch (scanError) {
-        console.error('❌ Error al escanear:', scanError)
-        toast.error('No se pudo detectar código de barras. Asegúrate de que el código esté visible y enfocado.')
-        
-        if (navigator.vibrate) {
-          navigator.vibrate([100, 50, 100, 50, 100])
-        }
+        if (found) toast.success('¡Producto encontrado!')
+      } catch {
+        toast.error('No se pudo detectar código de barras')
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100])
       } finally {
-        // Limpiar
         html5QrCode.clear()
       }
-      
     } catch (error) {
       console.error('Error al procesar imagen:', error)
       toast.error('Error al procesar la imagen')
     } finally {
       setIsScanning(false)
-      // Reset input para poder tomar otra foto
       e.target.value = ''
     }
   }
 
   // ============================================
-  // BARCODE SCANNER - BÚSQUEDA EXACTA POR UPC
+  // SEARCH BY UPC
   // ============================================
   const searchProductByUPC = async (upc) => {
     try {
-      console.log('🔍 Buscando producto por UPC:', upc)
-      
-      const params = new URLSearchParams({
-        q: upc,
-        limit: '50',
-      })
-
+      const params = new URLSearchParams({ q: upc, limit: '50' })
       const res = await fetch(`${API}/api/products?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       })
       
       if (!res.ok) throw new Error('Search failed')
       
       const data = await res.json()
-      const allProducts = data.rows || []
-      
-      const exactMatch = allProducts.find(p => p.upc === upc)
+      const exactMatch = data.rows?.find(p => p.upc === upc)
       
       if (exactMatch) {
-        console.log('✅ Producto encontrado:', exactMatch.name)
-        
-        // Activar flag para evitar recarga
         skipReloadRef.current = true
-        
         setProducts([exactMatch])
         setTotal(1)
         setOffset(1)
-        
         startEdit(exactMatch)
-        
         return true
       } else {
-        console.log('❌ No se encontró producto con UPC:', upc)
         toast.error(`Producto no encontrado: ${upc}`)
         return false
       }
@@ -165,23 +141,18 @@ export default function Inventory() {
   const handleSearchKeyDown = async (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
       e.preventDefault()
-      
       const found = await searchProductByUPC(searchQuery.trim())
-      
       if (found) {
-        // Limpiar input después de encontrar
         setTimeout(() => {
           setSearchQuery('')
-          if (searchInputRef.current) {
-            searchInputRef.current.focus()
-          }
+          searchInputRef.current?.focus()
         }, 100)
       }
     }
   }
 
   // ============================================
-  // BÚSQUEDA Y CARGA
+  // LOAD PRODUCTS
   // ============================================
   const loadProducts = async (reset = false) => {
     try {
@@ -196,10 +167,9 @@ export default function Inventory() {
       })
 
       const res = await fetch(`${API}/api/products?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       })
+      
       if (!res.ok) throw new Error('Failed to load products')
       
       const data = await res.json()
@@ -224,7 +194,6 @@ export default function Inventory() {
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
     
-    // Si acabamos de escanear, no recargar
     if (skipReloadRef.current) {
       skipReloadRef.current = false
       return
@@ -269,7 +238,7 @@ export default function Inventory() {
       const res = await fetch(`${API}/api/products/${id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(editForm),
@@ -293,9 +262,7 @@ export default function Inventory() {
     try {
       const res = await fetch(`${API}/api/products/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       })
 
       if (!res.ok) throw new Error('Failed to delete')
@@ -318,12 +285,10 @@ export default function Inventory() {
     }
 
     try {
-      // Check if UPC already exists
+      // Check for duplicate UPC
       if (addForm.upc) {
         const checkRes = await fetch(`${API}/api/products?q=${addForm.upc}&limit=50`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
         
         if (checkRes.ok) {
@@ -331,7 +296,6 @@ export default function Inventory() {
           const existing = checkData.rows?.find(p => p.upc === addForm.upc)
           
           if (existing) {
-            // Show duplicate modal
             setDuplicateProduct(existing)
             setShowDuplicateModal(true)
             return
@@ -342,7 +306,7 @@ export default function Inventory() {
       const res = await fetch(`${API}/api/products`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -369,7 +333,7 @@ export default function Inventory() {
   }
 
   // ============================================
-  // IMPORT/EXPORT CSV
+  // IMPORT/EXPORT
   // ============================================
   const handleImport = async (dryRun = false) => {
     if (!importFile) {
@@ -384,9 +348,7 @@ export default function Inventory() {
 
       const res = await fetch(`${API}/api/import/products?dryRun=${dryRun ? '1' : '0'}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       })
 
@@ -413,8 +375,8 @@ export default function Inventory() {
 
   const exportProducts = () => {
     const csv = [
-      ['upc', 'name', 'price', 'qty'],
-      ...products.map(p => [p.upc || '', p.name, p.price, p.qty])
+      ['upc', 'name', 'category', 'price', 'qty'],
+      ...products.map(p => [p.upc || '', p.name, p.category || '', p.price, p.qty])
     ].map(row => row.join(',')).join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -433,106 +395,8 @@ export default function Inventory() {
   return (
     <div className="h-screen overflow-y-auto">
       <div className="space-y-6 p-6">
-        {/* Duplicate UPC Modal */}
-        <AnimatePresence>
-          {showDuplicateModal && duplicateProduct && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 z-40"
-                onClick={() => setShowDuplicateModal(false)}
-              />
-              
-              {/* Modal */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              >
-                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-                  {/* Header */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                      <AlertTriangle className="w-6 h-6 text-yellow-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">UPC Duplicado</h3>
-                      <p className="text-sm text-gray-500">Este código ya existe</p>
-                    </div>
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase font-semibold">UPC</p>
-                        <p className="font-mono text-lg font-bold text-gray-900">{duplicateProduct.upc}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase font-semibold">Producto</p>
-                        <p className="text-gray-900 font-semibold">{duplicateProduct.name}</p>
-                      </div>
-                      {duplicateProduct.category && (
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase font-semibold">Categoría</p>
-                          <p className="text-gray-900">{duplicateProduct.category}</p>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase font-semibold">Precio</p>
-                          <p className="text-lg font-bold text-gray-900">${parseFloat(duplicateProduct.price).toFixed(2)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase font-semibold">Stock</p>
-                          <p className={`text-lg font-bold ${
-                            duplicateProduct.qty < 5
-                              ? 'text-red-600'
-                              : duplicateProduct.qty < 20
-                              ? 'text-yellow-600'
-                              : 'text-green-600'
-                          }`}>
-                            {duplicateProduct.qty}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setShowDuplicateModal(false)
-                        setMode('search')
-                        startEdit(duplicateProduct)
-                      }}
-                      className="flex-1 bg-primary-600 text-white font-semibold py-3 px-4 rounded-xl hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Editar Producto
-                    </button>
-                    <button
-                      onClick={() => setShowDuplicateModal(false)}
-                      className="px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* Div oculto para scanFile */}
+        {/* Hidden elements */}
         <div id="temp-file-scanner" style={{ display: 'none' }} />
-        
-        {/* Input oculto para cámara nativa */}
         <input
           ref={fileInputCameraRef}
           type="file"
@@ -540,6 +404,18 @@ export default function Inventory() {
           capture="environment"
           onChange={handleNativeCameraCapture}
           style={{ display: 'none' }}
+        />
+
+        {/* Duplicate Modal */}
+        <DuplicateProductModal
+          show={showDuplicateModal}
+          product={duplicateProduct}
+          onClose={() => setShowDuplicateModal(false)}
+          onEdit={() => {
+            setShowDuplicateModal(false)
+            setMode('search')
+            startEdit(duplicateProduct)
+          }}
         />
 
         {/* Header */}
@@ -593,356 +469,60 @@ export default function Inventory() {
 
         {/* Add Product Form */}
         {mode === 'add' && (
-          <Card title="Agregar Producto" icon={Plus}>
-            <form onSubmit={addProduct} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="UPC (Código de Barras)"
-                  placeholder="123456789"
-                  value={addForm.upc}
-                  onChange={(e) => setAddForm({ ...addForm, upc: e.target.value })}
-                />
-                <Input
-                  label="Nombre *"
-                  placeholder="Nombre del producto"
-                  value={addForm.name}
-                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                  required
-                />
-                <Input
-                  label="Categoría"
-                  placeholder="Bebidas, Snacks, etc."
-                  value={addForm.category}
-                  onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
-                />
-                <Input
-                  label="Precio *"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={addForm.price}
-                  onChange={(e) => setAddForm({ ...addForm, price: e.target.value })}
-                  required
-                />
-                <Input
-                  label="Cantidad"
-                  type="number"
-                  placeholder="0"
-                  value={addForm.qty}
-                  onChange={(e) => setAddForm({ ...addForm, qty: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" icon={Check}>
-                  Crear Producto
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setMode('search')}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </Card>
+          <AddProductForm
+            addForm={addForm}
+            setAddForm={setAddForm}
+            onSubmit={addProduct}
+            onCancel={() => setMode('search')}
+          />
         )}
 
         {/* Import CSV */}
         {mode === 'import' && (
-          <Card title="Importar Productos (CSV)" icon={Upload}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Formato CSV: upc,name,price,qty
-                </label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => setImportFile(e.target.files[0])}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-                />
-              </div>
-
-              {importResult && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h3 className="font-semibold mb-2">Resultado de Importación</h3>
-                  <p>Importados: {importResult.imported}</p>
-                  <p>Errores: {importResult.errors}</p>
-                  {importResult.preview && (
-                    <div className="mt-2">
-                      <p className="text-sm font-semibold">Vista Previa:</p>
-                      <pre className="text-xs bg-white p-2 rounded mt-1 overflow-x-auto">
-                        {JSON.stringify(importResult.preview, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleImport(true)}
-                  loading={importing}
-                  disabled={!importFile}
-                  variant="outline"
-                >
-                  Vista Previa
-                </Button>
-                <Button
-                  onClick={() => handleImport(false)}
-                  loading={importing}
-                  disabled={!importFile}
-                  icon={Upload}
-                >
-                  Importar
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setMode('search')
-                    setImportFile(null)
-                    setImportResult(null)
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          </Card>
+          <ImportCSVForm
+            importFile={importFile}
+            setImportFile={setImportFile}
+            importResult={importResult}
+            importing={importing}
+            onPreview={() => handleImport(true)}
+            onImport={() => handleImport(false)}
+            onCancel={() => {
+              setMode('search')
+              setImportFile(null)
+              setImportResult(null)
+            }}
+            fileInputRef={fileInputRef}
+          />
         )}
 
-        {/* 🔒 STICKY SEARCH BOX */}
+        {/* Search Bar */}
         {(mode === 'search' || mode === 'low') && (
-          <div className="sticky top-0 z-30 bg-white py-4 -mx-6 px-6 shadow-sm">
-            <Card>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Scan className="w-5 h-5 text-primary-600" />
-                  <span className="text-sm font-semibold text-gray-600 uppercase">
-                    Buscar Productos
-                  </span>
-                </div>
-                
-                {/* Botón de cámara para móviles */}
-                <Button
-                  variant="outline"
-                  icon={Camera}
-                  onClick={() => fileInputCameraRef.current?.click()}
-                  loading={isScanning}
-                  className="md:hidden"
-                >
-                  {isScanning ? '...' : 'Foto'}
-                </Button>
-              </div>
-              
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Input
-                    ref={searchInputRef}
-                    icon={Search}
-                    placeholder="Escanea UPC o busca por nombre..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                  />
-                </div>
-                
-                {/* Botón de cámara para desktop */}
-                <Button
-                  variant="outline"
-                  icon={Camera}
-                  onClick={() => fileInputCameraRef.current?.click()}
-                  loading={isScanning}
-                  className="hidden md:flex"
-                >
-                  {isScanning ? 'Analizando...' : 'Tomar Foto'}
-                </Button>
-              </div>
-
-              <div className="mt-2 text-xs text-gray-500">
-                💡 Tip: Escanea con escáner físico (Enter) o toma foto del código con la cámara
-              </div>
-            </Card>
-          </div>
+          <SearchBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onKeyDown={handleSearchKeyDown}
+            onCameraClick={() => fileInputCameraRef.current?.click()}
+            isScanning={isScanning}
+            searchInputRef={searchInputRef}
+          />
         )}
 
         {/* Products Table */}
         {(mode === 'search' || mode === 'low') && (
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b-2 border-gray-200">
-                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">UPC</th>
-                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Producto</th>
-                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Categoría</th>
-                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Precio</th>
-                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Stock</th>
-                    <th className="text-left p-4 font-bold text-sm text-gray-600 uppercase">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && products.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" className="text-center py-12">
-                        <div className="spinner mx-auto"></div>
-                      </td>
-                    </tr>
-                  ) : products.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" className="text-center py-12 text-gray-500">
-                        <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                        <p>No hay productos</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    <AnimatePresence>
-                      {products.map((product) => (
-                        <motion.tr
-                          key={product.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="border-b border-gray-100 hover:bg-gray-50"
-                        >
-                          {editingId === product.id ? (
-                            <>
-                              <td className="p-4">
-                                <input
-                                  type="text"
-                                  value={editForm.upc}
-                                  onChange={(e) => setEditForm({ ...editForm, upc: e.target.value })}
-                                  className="w-full px-2 py-1 border rounded font-mono text-sm"
-                                  placeholder="UPC"
-                                />
-                              </td>
-                              <td className="p-4">
-                                <input
-                                  type="text"
-                                  value={editForm.name}
-                                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                  className="w-full px-2 py-1 border rounded"
-                                />
-                              </td>
-                              <td className="p-4">
-                                <input
-                                  type="text"
-                                  value={editForm.category}
-                                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                                  className="w-full px-2 py-1 border rounded"
-                                  placeholder="Categoría"
-                                />
-                              </td>
-                              <td className="p-4">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={editForm.price}
-                                  onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                                  className="w-24 px-2 py-1 border rounded"
-                                />
-                              </td>
-                              <td className="p-4">
-                                <input
-                                  type="number"
-                                  value={editForm.qty}
-                                  onChange={(e) => setEditForm({ ...editForm, qty: e.target.value })}
-                                  className="w-20 px-2 py-1 border rounded"
-                                />
-                              </td>
-                              <td className="p-4">
-                                <div className="flex gap-1">
-                                  <button
-                                    onClick={() => saveEdit(product.id)}
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                                    title="Guardar"
-                                  >
-                                    <Check className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={cancelEdit}
-                                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                                    title="Cancelar"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="p-4 font-mono text-sm">
-                                {product.upc || <span className="text-gray-400">-</span>}
-                              </td>
-                              <td className="p-4 font-semibold">
-                                {product.name}
-                              </td>
-                              <td className="p-4">
-                                {product.category ? (
-                                  <span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium">
-                                    {product.category}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                              <td className="p-4 font-mono">
-                                ${parseFloat(product.price).toFixed(2)}
-                              </td>
-                              <td className="p-4">
-                                <span className={`px-2 py-1 rounded-lg font-semibold ${
-                                  product.qty < 5
-                                    ? 'bg-red-100 text-red-800'
-                                    : product.qty < 20
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-green-100 text-green-800'
-                                }`}>
-                                  {product.qty}
-                                </span>
-                              </td>
-                              <td className="p-4">
-                                <div className="flex gap-1">
-                                  <button
-                                    onClick={() => startEdit(product)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                                    title="Editar"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => deleteProduct(product.id)}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                                    title="Eliminar"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </>
-                          )}
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Load More */}
-            {offset < total && (
-              <div className="mt-6 text-center">
-                <Button
-                  variant="outline"
-                  onClick={() => loadProducts(false)}
-                  loading={loading}
-                >
-                  Cargar Más ({offset} de {total})
-                </Button>
-              </div>
-            )}
-          </Card>
+          <ProductsTable
+            products={products}
+            loading={loading}
+            editingId={editingId}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            onSaveEdit={saveEdit}
+            onCancelEdit={cancelEdit}
+            onStartEdit={startEdit}
+            onDelete={deleteProduct}
+            offset={offset}
+            total={total}
+            onLoadMore={() => loadProducts(false)}
+          />
         )}
       </div>
     </div>
