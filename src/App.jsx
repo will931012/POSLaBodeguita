@@ -10,7 +10,7 @@ import Login from './pages/Login'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
-import Sales from './pages/Sales'
+import Caja from './pages/Caja'
 import Inventory from './pages/Inventory'
 import Receipts from './pages/Receipts'
 import CloseCash from './pages/CloseCash'
@@ -49,7 +49,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
 
         {/* Sales - all roles */}
-        <Route path="/sales" element={<Sales />} />
+        <Route path="/sales" element={<Caja />} />
 
         {/* Inventory - admin & manager */}
         <Route
