@@ -1,22 +1,37 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { Toaster } from 'sonner'
 
-// Auth Pages
+// Auth Pages (no lazy - needed immediately)
 import LocationSelector from './pages/LocationSelector'
 import Login from './pages/Login'
 
-// Protected Pages
+// Layout components (no lazy - needed for all routes)
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
-import Dashboard from './pages/Dashboard'
-import Caja from './pages/Caja'
-import Inventory from './pages/Inventory'
-import Receipts from './pages/Receipts'
-import CloseCash from './pages/CloseCash'
-import ProductLabel from './pages/ProductLabel'
-import AdminDashboard from './pages/Admindashboard'
 import NotFound from './pages/NotFound'
+
+// Lazy load heavy components
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Caja = lazy(() => import('./pages/Caja'))
+const Inventory = lazy(() => import('./pages/Inventory'))
+const Receipts = lazy(() => import('./pages/Receipts'))
+const CloseCash = lazy(() => import('./pages/CloseCash'))
+const ProductLabel = lazy(() => import('./pages/ProductLabel'))
+const AdminDashboard = lazy(() => import('./pages/Admindashboard'))
+
+// Loading component
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="spinner mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando...</p>
+      </div>
+    </div>
+  )
+}
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth()
@@ -46,30 +61,55 @@ function AppRoutes() {
         }
       >
         {/* Dashboard - all roles */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route 
+          path="/dashboard" 
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Dashboard />
+            </Suspense>
+          } 
+        />
 
-        {/* Sales - all roles */}
-        <Route path="/sales" element={<Caja />} />
+        {/* Caja - all roles */}
+        <Route 
+          path="/caja" 
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Caja />
+            </Suspense>
+          } 
+        />
 
         {/* Inventory - admin & manager */}
         <Route
           path="/inventory"
           element={
             <ProtectedRoute roles={['admin', 'manager']}>
-              <Inventory />
+              <Suspense fallback={<PageLoader />}>
+                <Inventory />
+              </Suspense>
             </ProtectedRoute>
           }
         />
 
         {/* Receipts */}
-        <Route path="/receipts" element={<Receipts />} />
+        <Route 
+          path="/receipts" 
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Receipts />
+            </Suspense>
+          } 
+        />
 
         {/* Close cash */}
         <Route
           path="/close"
           element={
             <ProtectedRoute roles={['admin', 'manager']}>
-              <CloseCash />
+              <Suspense fallback={<PageLoader />}>
+                <CloseCash />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -79,7 +119,9 @@ function AppRoutes() {
           path="/label/:id"
           element={
             <ProtectedRoute roles={['admin', 'manager']}>
-              <ProductLabel />
+              <Suspense fallback={<PageLoader />}>
+                <ProductLabel />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -89,7 +131,9 @@ function AppRoutes() {
           path="/admin"
           element={
             <ProtectedRoute roles={['admin']}>
-              <AdminDashboard />
+              <Suspense fallback={<PageLoader />}>
+                <AdminDashboard />
+              </Suspense>
             </ProtectedRoute>
           }
         />
