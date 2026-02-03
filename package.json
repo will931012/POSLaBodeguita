@@ -13,6 +13,7 @@
   "dependencies": {
     "clsx": "^2.0.0",
     "date-fns": "^3.0.6",
+    "dompurify": "^3.0.9",
     "framer-motion": "^10.16.16",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.300.0",

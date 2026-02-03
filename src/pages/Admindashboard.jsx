@@ -115,14 +115,25 @@ export default function AdminDashboard() {
   // Load all perfumes from inventory
   const loadAllPerfumes = async () => {
     try {
-      const res = await fetch(`${API}/api/products?q=perfume&limit=1000`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        const perfumes = data.rows.filter(p => 
-          p.category && p.category.toLowerCase().includes('perfume')
+      const [perfumeRes, fraganciaRes] = await Promise.all([
+        fetch(`${API}/api/products?q=perfume&limit=1000`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`${API}/api/products?q=fragancia&limit=1000`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ])
+
+      if (perfumeRes.ok && fraganciaRes.ok) {
+        const perfumeData = await perfumeRes.json()
+        const fraganciaData = await fraganciaRes.json()
+        const combined = [...perfumeData.rows, ...fraganciaData.rows]
+        const byId = new Map(combined.map((p) => [p.id, p]))
+        const perfumes = Array.from(byId.values()).filter(p => 
+          p.category && (
+            p.category.toLowerCase().includes('perfume') ||
+            p.category.toLowerCase().includes('fragancia')
+          )
         )
         setAllPerfumes(perfumes)
       }
@@ -158,11 +169,12 @@ export default function AdminDashboard() {
         const perfumeData = perfumeRes.ok ? await perfumeRes.json() : []
         
         const perfumeRevenue = perfumeData.reduce((sum, p) => sum + (parseFloat(p.revenue) || 0), 0)
+        const perfumeUnits = perfumeData.reduce((sum, p) => sum + (parseFloat(p.units_sold) || 0), 0)
         
         setTodaySales({
           count: summary.totalSales || 0,
           revenue: summary.totalRevenue || 0,
-          perfumeCount: perfumeData.length || 0,
+          perfumeCount: perfumeUnits || 0,
           perfumeRevenue: perfumeRevenue
         })
       }

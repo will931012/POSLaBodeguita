@@ -78,7 +78,7 @@ router.get('/perfume-sales', async (req, res) => {
       JOIN sale_items si ON s.id = si.sale_id
       JOIN products p ON si.product_id = p.id
       WHERE (s.location_id = $1 OR s.location_id IS NULL)
-        AND p.category ILIKE '%perfume%'
+        AND (p.category ILIKE '%perfume%' OR p.category ILIKE '%fragancia%')
     `
     const params = [locationId]
 

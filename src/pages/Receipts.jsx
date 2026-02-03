@@ -7,6 +7,7 @@ import Input from '@components/Input'
 import { toast } from 'sonner'
 import { useAuth } from '@/context/AuthContext'
 import { format } from 'date-fns'
+import DOMPurify from 'dompurify'
 import { es } from 'date-fns/locale'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -23,6 +24,15 @@ export default function Receipts() {
   
   // Filtros
   const [dateFilter, setDateFilter] = useState('all') // 'all' | 'today' | 'week' | 'month'
+
+  const sanitizeHtml = (html) => {
+    if (!html) return ''
+    return DOMPurify.sanitize(html, {
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed', 'link', 'meta'],
+      FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+    })
+  }
 
   // ============================================
   // CARGAR RECIBOS
@@ -134,13 +144,14 @@ export default function Receipts() {
       return
     }
 
+    const safeContent = sanitizeHtml(receipt.content)
     const printWindow = window.open('', 'PRINT', 'height=600,width=400')
     if (!printWindow) {
       toast.error('Popup bloqueado. Permite popups para imprimir.')
       return
     }
     
-    printWindow.document.write(receipt.content)
+    printWindow.document.write(safeContent)
     printWindow.document.close()
     printWindow.focus()
     setTimeout(() => {
@@ -181,6 +192,9 @@ export default function Receipts() {
   // ============================================
   const salesReceipts = filteredReceipts.filter(r => r.sale_id)
   const otherReceipts = filteredReceipts.filter(r => !r.sale_id)
+  const sanitizedReceiptContent = selectedReceipt?.content
+    ? sanitizeHtml(selectedReceipt.content)
+    : ''
 
   return (
     <div className="space-y-6">
@@ -478,7 +492,7 @@ export default function Receipts() {
                         </div>
                         <div 
                           className="bg-gray-50 rounded-lg p-4 border border-gray-200 overflow-x-auto"
-                          dangerouslySetInnerHTML={{ __html: selectedReceipt.content }}
+                          dangerouslySetInnerHTML={{ __html: sanitizedReceiptContent }}
                         />
                       </div>
                     ) : (
