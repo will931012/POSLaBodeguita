@@ -7,6 +7,7 @@ import {
   Package, 
   Receipt, 
   DollarSign,
+  Crown,
   Menu,
   X,
   LogOut,
@@ -30,6 +31,7 @@ export default function Navbar() {
     { path: '/inventory', label: 'Inventario', icon: Package, roles: ['admin', 'manager'] },
     { path: '/receipts', label: 'Recibos', icon: Receipt, roles: [] },
     { path: '/close', label: 'Cierre', icon: DollarSign, roles: ['admin', 'manager'] },
+    { path: '/admin', label: 'Admin', icon: Crown, roles: ['admin'] },
   ]
 
   const visibleItems = navItems.filter(
