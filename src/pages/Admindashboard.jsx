@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   TrendingUp,
@@ -50,11 +50,14 @@ export default function AdminDashboard() {
     perfumeRevenue: 0
   })
 
+  const isAbortError = (error) => error?.name === 'AbortError'
+
   // Calculate date range
   const getDateRange = (days) => {
+    const parsedDays = Number.isFinite(parseInt(days)) ? parseInt(days) : 30
     const end = new Date()
     const start = new Date()
-    start.setDate(start.getDate() - parseInt(days))
+    start.setDate(start.getDate() - parsedDays)
     return {
       startDate: start.toISOString(),
       endDate: end.toISOString()
@@ -62,7 +65,7 @@ export default function AdminDashboard() {
   }
 
   // Load dashboard data
-  const loadDashboard = async () => {
+  const loadDashboard = async (signal) => {
     try {
       setLoading(true)
       const { startDate, endDate } = getDateRange(dateRange)
@@ -70,16 +73,20 @@ export default function AdminDashboard() {
 
       const [summaryRes, categoryRes, perfumeRes, topRes] = await Promise.all([
         fetch(`${API}/api/analytics/dashboard-summary?${params}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         }),
         fetch(`${API}/api/analytics/sales-by-category?${params}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         }),
         fetch(`${API}/api/analytics/perfume-sales?${params}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         }),
         fetch(`${API}/api/analytics/top-products?limit=5&${params}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         })
       ])
 
@@ -105,6 +112,7 @@ export default function AdminDashboard() {
       setPerfumeProducts(perfumeList)
       setTopProducts(topList)
     } catch (error) {
+      if (isAbortError(error)) return
       console.error('Dashboard load error:', error)
       toast.error(error.message || 'Error al cargar datos del dashboard')
     } finally {
@@ -113,21 +121,25 @@ export default function AdminDashboard() {
   }
 
   // Load all perfumes from inventory
-  const loadAllPerfumes = async () => {
+  const loadAllPerfumes = async (signal) => {
     try {
       const [perfumeRes, fraganciaRes] = await Promise.all([
         fetch(`${API}/api/products?q=perfume&limit=1000`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         }),
         fetch(`${API}/api/products?q=fragancia&limit=1000`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         })
       ])
 
-      if (perfumeRes.ok && fraganciaRes.ok) {
-        const perfumeData = await perfumeRes.json()
-        const fraganciaData = await fraganciaRes.json()
-        const combined = [...perfumeData.rows, ...fraganciaData.rows]
+      const datasets = []
+      if (perfumeRes.ok) datasets.push(await perfumeRes.json())
+      if (fraganciaRes.ok) datasets.push(await fraganciaRes.json())
+
+      if (datasets.length > 0) {
+        const combined = datasets.flatMap((d) => d.rows || [])
         const byId = new Map(combined.map((p) => [p.id, p]))
         const perfumes = Array.from(byId.values()).filter(p => 
           p.category && (
@@ -138,12 +150,13 @@ export default function AdminDashboard() {
         setAllPerfumes(perfumes)
       }
     } catch (error) {
+      if (isAbortError(error)) return
       console.error('Error loading all perfumes:', error)
     }
   }
 
   // Load today's sales
-  const loadTodaySales = async () => {
+  const loadTodaySales = async (signal) => {
     try {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
@@ -157,10 +170,12 @@ export default function AdminDashboard() {
 
       const [summaryRes, perfumeRes] = await Promise.all([
         fetch(`${API}/api/analytics/dashboard-summary?${params}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         }),
         fetch(`${API}/api/analytics/perfume-sales?${params}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         })
       ])
 
@@ -179,19 +194,37 @@ export default function AdminDashboard() {
         })
       }
     } catch (error) {
+      if (isAbortError(error)) return
       console.error('Error loading today sales:', error)
     }
   }
 
   useEffect(() => {
-    loadDashboard()
-    loadAllPerfumes()
-    loadTodaySales()
-  }, [dateRange])
+    if (!token) return
+    const controller = new AbortController()
+    loadDashboard(controller.signal)
+    return () => controller.abort()
+  }, [dateRange, token])
 
-  const perfumePercentage = summary.totalRevenue > 0
-    ? (summary.perfumeRevenue / summary.totalRevenue * 100).toFixed(1)
-    : 0
+  useEffect(() => {
+    if (!token) return
+    const controller = new AbortController()
+    loadAllPerfumes(controller.signal)
+    return () => controller.abort()
+  }, [token])
+
+  useEffect(() => {
+    if (!token) return
+    const controller = new AbortController()
+    loadTodaySales(controller.signal)
+    return () => controller.abort()
+  }, [token])
+
+  const perfumePercentage = useMemo(() => {
+    return summary.totalRevenue > 0
+      ? (summary.perfumeRevenue / summary.totalRevenue * 100).toFixed(1)
+      : 0
+  }, [summary.perfumeRevenue, summary.totalRevenue])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 py-8 px-4">
@@ -220,6 +253,7 @@ export default function AdminDashboard() {
               onChange={(e) => setDateRange(e.target.value)}
               className="px-4 py-2 rounded-xl border-2 border-purple-200 bg-white font-semibold text-gray-700 focus:outline-none focus:border-purple-500 transition-colors"
             >
+              <option value="1">Último día</option>
               <option value="7">Últimos 7 días</option>
               <option value="30">Últimos 30 días</option>
               <option value="90">Últimos 90 días</option>

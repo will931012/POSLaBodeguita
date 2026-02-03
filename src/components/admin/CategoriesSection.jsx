@@ -22,9 +22,13 @@ export default function CategoriesSection({ categoryData }) {
         </div>
 
         <div className="space-y-3">
-          {categoryData.map((cat, index) => (
-            <CategoryRow key={index} category={cat} />
-          ))}
+          {categoryData.length === 0 ? (
+            <p className="text-center py-8 text-gray-500">No hay datos de categorÃ­as</p>
+          ) : (
+            categoryData.map((cat, index) => (
+              <CategoryRow key={index} category={cat} />
+            ))
+          )}
         </div>
       </Card>
     </motion.div>

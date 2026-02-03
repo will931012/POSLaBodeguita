@@ -22,7 +22,7 @@ const toNumber = (val) => {
 }
 
 export default function Caja() {
-  const { token } = useAuth()
+  const { token, location } = useAuth()
   
   // UI State
   const [mode, setMode] = useState('idle')
@@ -48,6 +48,7 @@ export default function Caja() {
   // Modal State
   const [showTicketModal, setShowTicketModal] = useState(false)
   const [pendingReceipt, setPendingReceipt] = useState(null)
+  const [verse, setVerse] = useState(null)
   
   // Refs
   const searchTimerRef = useRef(null)
@@ -59,6 +60,11 @@ export default function Caja() {
   useEffect(() => {
     loadSavedCart()
   }, [])
+
+  useEffect(() => {
+    if (!token) return
+    loadVerse()
+  }, [token])
 
   const loadSavedCart = () => {
     try {
@@ -87,6 +93,18 @@ export default function Caja() {
     } catch (error) {
       console.error('Error loading saved cart:', error)
       localStorage.removeItem(CART_STORAGE_KEY)
+    }
+  }
+
+  const loadVerse = async () => {
+    try {
+      const res = await fetch('https://labs.bible.org/api/?passage=votd&type=json')
+      const data = await res.json()
+      if (data && data[0]) {
+        setVerse(data[0])
+      }
+    } catch (error) {
+      console.error('Verse error:', error)
     }
   }
 
@@ -375,6 +393,12 @@ export default function Caja() {
   }
 
   const generateReceipt = (sale) => {
+    const locationName = location?.name || 'Compassion & Love'
+    const locationAddress = location?.address || ''
+    const verseText = verse?.text || ''
+    const verseRef = verse
+      ? `${verse.bookname} ${verse.chapter}:${verse.verse}`
+      : ''
     const allProducts = [...products, ...tempProducts]
     const items = Object.entries(cart).map(([productId, qty]) => {
       const product = allProducts.find(p => p.id === parseInt(productId))
@@ -395,13 +419,16 @@ export default function Caja() {
         <style>
           body { font-family: 'Courier New', monospace; max-width: 300px; margin: 0 auto; padding: 10px; }
           .center { text-align: center; }
-          .header { font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+          .header { font-weight: bold; font-size: 16px; margin-bottom: 6px; }
+          .subheader { font-size: 12px; margin-bottom: 8px; }
           .line { border-top: 1px dashed #000; margin: 10px 0; }
           table { width: 100%; border-collapse: collapse; }
           td { padding: 4px 0; }
           .right { text-align: right; }
           .total { font-weight: bold; font-size: 14px; }
           .temp-badge { background: #fbbf24; color: #000; padding: 1px 4px; font-size: 9px; border-radius: 3px; }
+          .footer { margin-top: 12px; font-size: 11px; }
+          .verse { font-style: italic; }
           @media print {
             @page { size: 80mm auto; margin: 0; }
             button { display: none; }
@@ -409,8 +436,8 @@ export default function Caja() {
         </style>
       </head>
       <body>
-        <div class="center header">Compassion & Love</div>
-        <div class="center">Recibo #${sale.id}</div>
+        <div class="center header">${locationName}</div>
+        <div class="center subheader">Recibo #${sale.id}</div>
         <div class="center">${new Date().toLocaleString('es-ES')}</div>
         <div class="line"></div>
         <table>
@@ -443,6 +470,11 @@ export default function Caja() {
         </table>
         <div class="line"></div>
         <div class="center">¡Gracias por su compra!</div>
+        <div class="center footer">
+          ${locationAddress ? `<div>${locationAddress}</div>` : ''}
+          ${verseText ? `<div class="verse">"${verseText}"</div>` : ''}
+          ${verseRef ? `<div>${verseRef}</div>` : ''}
+        </div>
         <div class="center" style="margin-top: 20px;">
           <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer;">Imprimir</button>
         </div>
@@ -571,3 +603,5 @@ export default function Caja() {
     </>
   )
 }
+
+

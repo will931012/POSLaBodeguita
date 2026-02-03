@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 
-export default function PerfumeRow({ product, rank }) {
-  const maxRevenue = 1000
+export default function PerfumeRow({ product, rank, maxRevenue }) {
   const revenue = parseFloat(product.revenue) || 0
   const percentage = Math.min((revenue / maxRevenue) * 100, 100)
 

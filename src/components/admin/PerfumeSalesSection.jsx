@@ -4,6 +4,11 @@ import Card from '@components/Card'
 import PerfumeRow from './PerfumeRow.jsx'
 
 export default function PerfumeSalesSection({ perfumeProducts }) {
+  const maxRevenue = perfumeProducts.reduce((max, p) => {
+    const revenue = parseFloat(p.revenue) || 0
+    return revenue > max ? revenue : max
+  }, 0)
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -27,7 +32,12 @@ export default function PerfumeSalesSection({ perfumeProducts }) {
             <p className="text-center py-8 text-gray-500">No hay datos de perfumes</p>
           ) : (
             perfumeProducts.slice(0, 10).map((product, index) => (
-              <PerfumeRow key={product.id} product={product} rank={index + 1} />
+              <PerfumeRow
+                key={product.id}
+                product={product}
+                rank={index + 1}
+                maxRevenue={maxRevenue || 1}
+              />
             ))
           )}
         </div>
