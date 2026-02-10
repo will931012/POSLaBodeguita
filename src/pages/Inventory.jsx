@@ -34,6 +34,7 @@ export default function Inventory() {
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
+  const [categories, setCategories] = useState([])
   
   // Edit State
   const [editingId, setEditingId] = useState(null)
@@ -154,6 +155,19 @@ export default function Inventory() {
   // ============================================
   // LOAD PRODUCTS
   // ============================================
+  const loadCategories = async () => {
+    try {
+      const res = await fetch(`${API}/api/products/categories`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('Failed to load categories')
+      const data = await res.json()
+      setCategories(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Categories load error:', error)
+    }
+  }
+
   const loadProducts = async (reset = false) => {
     try {
       setLoading(true)
@@ -190,6 +204,10 @@ export default function Inventory() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (token) loadCategories()
+  }, [token])
 
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
@@ -249,6 +267,7 @@ export default function Inventory() {
       const updated = await res.json()
       setProducts(products.map(p => p.id === id ? updated : p))
       setEditingId(null)
+      loadCategories()
       toast.success('Producto actualizado')
     } catch (error) {
       console.error('Update error:', error)
@@ -325,6 +344,7 @@ export default function Inventory() {
       setTotal(total + 1)
       setAddForm({ upc: '', name: '', price: '', qty: '', category: '' })
       setMode('search')
+      loadCategories()
       toast.success('Producto creado')
     } catch (error) {
       console.error('Create error:', error)
@@ -472,6 +492,7 @@ export default function Inventory() {
           <AddProductForm
             addForm={addForm}
             setAddForm={setAddForm}
+            categories={categories}
             onSubmit={addProduct}
             onCancel={() => setMode('search')}
           />
@@ -515,6 +536,7 @@ export default function Inventory() {
             editingId={editingId}
             editForm={editForm}
             setEditForm={setEditForm}
+            categories={categories}
             onSaveEdit={saveEdit}
             onCancelEdit={cancelEdit}
             onStartEdit={startEdit}

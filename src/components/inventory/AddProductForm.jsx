@@ -6,6 +6,7 @@ import Button from '@components/Button'
 export default function AddProductForm({ 
   addForm, 
   setAddForm, 
+  categories,
   onSubmit, 
   onCancel 
 }) {
@@ -26,12 +27,23 @@ export default function AddProductForm({
             onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
             required
           />
-          <Input
-            label="Categoría"
-            placeholder="Bebidas, Snacks, etc."
-            value={addForm.category}
-            onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
-          />
+          <div className="w-full">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
+              Categoría
+            </label>
+            <select
+              value={addForm.category}
+              onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border-2 font-medium transition-all duration-200 focus:outline-none input-focus border-gray-200 focus:border-primary-600"
+            >
+              <option value="">Sin categoría</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
           <Input
             label="Precio *"
             type="number"

@@ -9,6 +9,7 @@ export default function ProductsTable({
   editingId,
   editForm,
   setEditForm,
+  categories,
   onSaveEdit,
   onCancelEdit,
   onStartEdit,
@@ -75,13 +76,18 @@ export default function ProductsTable({
                           />
                         </td>
                         <td className="p-4">
-                          <input
-                            type="text"
+                          <select
                             value={editForm.category}
                             onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                             className="w-full px-2 py-1 border rounded"
-                            placeholder="Categoría"
-                          />
+                          >
+                            <option value="">Sin categoría</option>
+                            {categories.map((category) => (
+                              <option key={category} value={category}>
+                                {category}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="p-4">
                           <input

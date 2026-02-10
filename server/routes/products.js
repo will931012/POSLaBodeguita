@@ -4,6 +4,32 @@ const { query } = require('../config/database')
 const router = express.Router()
 
 // ============================================
+// GET /api/products/categories - List distinct categories
+// ============================================
+router.get('/categories', async (req, res) => {
+  try {
+    const locationId = req.location.id
+
+    const result = await query(
+      `
+        SELECT DISTINCT category
+        FROM products
+        WHERE category IS NOT NULL
+          AND category <> ''
+          AND (location_id = $1 OR location_id IS NULL)
+        ORDER BY category ASC
+      `,
+      [locationId]
+    )
+
+    res.json(result.rows.map(row => row.category))
+  } catch (error) {
+    console.error('Categories fetch error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// ============================================
 // GET /api/products - List all products with filters
 // ============================================
 router.get('/', async (req, res) => {
