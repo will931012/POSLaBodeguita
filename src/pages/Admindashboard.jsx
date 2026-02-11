@@ -19,6 +19,7 @@ import PerfumeSalesSection from '@/components/admin/PerfumeSalesSection.jsx'
 import CategoriesSection from '@/components/admin/CategoriesSection.jsx'
 import TopProductsTable from '@/components/admin/TopProductsTable.jsx'
 import PerfumesInventory from '@/components/admin/PerfumesInventory.jsx'
+import Button from '@/components/Button.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -43,6 +44,9 @@ export default function AdminDashboard() {
   const [perfumeProducts, setPerfumeProducts] = useState([])
   const [topProducts, setTopProducts] = useState([])
   const [allPerfumes, setAllPerfumes] = useState([])
+  const [announcementTitle, setAnnouncementTitle] = useState('')
+  const [announcementMessage, setAnnouncementMessage] = useState('')
+  const [announcementSending, setAnnouncementSending] = useState(false)
   const [todaySales, setTodaySales] = useState({
     count: 0,
     revenue: 0,
@@ -226,6 +230,42 @@ export default function AdminDashboard() {
       : 0
   }, [summary.perfumeRevenue, summary.totalRevenue])
 
+  const handleAnnouncementSubmit = async (event) => {
+    event.preventDefault()
+    if (!announcementMessage.trim()) {
+      toast.error('Escribe un mensaje para enviar')
+      return
+    }
+
+    setAnnouncementSending(true)
+    try {
+      const res = await fetch(`${API}/api/announcements`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: announcementTitle.trim(),
+          message: announcementMessage.trim(),
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Error al enviar el mensaje')
+      }
+
+      toast.success('Mensaje enviado a todos los usuarios')
+      setAnnouncementTitle('')
+      setAnnouncementMessage('')
+    } catch (error) {
+      toast.error(error.message || 'Error al enviar el mensaje')
+    } finally {
+      setAnnouncementSending(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 py-8 px-4">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -261,6 +301,42 @@ export default function AdminDashboard() {
             </select>
           </div>
         </motion.div>
+
+        <div className="bg-white/90 backdrop-blur rounded-2xl border border-purple-100 p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-900">Mensaje global</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Envía un aviso que se mostrará una sola vez a todos los usuarios.
+          </p>
+          <form onSubmit={handleAnnouncementSubmit} className="mt-4 space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Título (opcional)
+              </label>
+              <input
+                type="text"
+                value={announcementTitle}
+                onChange={(e) => setAnnouncementTitle(e.target.value)}
+                placeholder="Aviso importante"
+                className="w-full px-4 py-2 rounded-xl border-2 border-purple-200 bg-white text-gray-700 focus:outline-none focus:border-purple-500 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Mensaje
+              </label>
+              <textarea
+                rows={4}
+                value={announcementMessage}
+                onChange={(e) => setAnnouncementMessage(e.target.value)}
+                placeholder="Se ha cambiado el precio de..."
+                className="w-full px-4 py-2 rounded-xl border-2 border-purple-200 bg-white text-gray-700 focus:outline-none focus:border-purple-500 transition-colors"
+              />
+            </div>
+            <Button type="submit" loading={announcementSending}>
+              Enviar a todos
+            </Button>
+          </form>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">

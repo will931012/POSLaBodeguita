@@ -87,6 +87,31 @@ async function initDatabase() {
     `)
     console.log('✅ Closures table ready')
 
+    // Announcements table
+    await query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        active BOOLEAN NOT NULL DEFAULT true,
+        created_by INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    console.log('✅ Announcements table ready')
+
+    // Announcement reads table
+    await query(`
+      CREATE TABLE IF NOT EXISTS announcement_reads (
+        id SERIAL PRIMARY KEY,
+        announcement_id INTEGER NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL,
+        read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (announcement_id, user_id)
+      )
+    `)
+    console.log('✅ Announcement reads table ready')
+
     // Create indexes
     await query(`
       CREATE INDEX IF NOT EXISTS idx_products_upc ON products(upc);
@@ -96,6 +121,8 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_receipts_sale_id ON receipts(sale_id);
       CREATE INDEX IF NOT EXISTS idx_receipts_created_at ON receipts(created_at);
       CREATE INDEX IF NOT EXISTS idx_closures_day ON closures(day);
+      CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at);
+      CREATE INDEX IF NOT EXISTS idx_announcement_reads_user_id ON announcement_reads(user_id);
     `)
     console.log('✅ Indexes created')
 
