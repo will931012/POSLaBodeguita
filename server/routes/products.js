@@ -3,6 +3,11 @@ const { query } = require('../config/database')
 
 const router = express.Router()
 
+const normalizeText = (value) => {
+  if (typeof value !== 'string') return value
+  return value.normalize('NFC')
+}
+
 // ============================================
 // GET /api/products/categories - List distinct categories
 // ============================================
@@ -22,7 +27,7 @@ router.get('/categories', async (req, res) => {
       [locationId]
     )
 
-    res.json(result.rows.map(row => row.category))
+    res.json(result.rows.map(row => normalizeText(row.category)))
   } catch (error) {
     console.error('Categories fetch error:', error)
     res.status(500).json({ error: error.message })
@@ -60,8 +65,13 @@ router.get('/', async (req, res) => {
 
     const result = await query(sql, params)
 
+    const normalizedRows = result.rows.map((row) => ({
+      ...row,
+      category: normalizeText(row.category),
+    }))
+
     res.json({
-      rows: result.rows,
+      rows: normalizedRows,
       total,
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -90,7 +100,11 @@ router.post('/', async (req, res) => {
       [upc || null, name, price, qty, category || null, locationId]
     )
 
-    res.json(result.rows[0])
+    const created = result.rows[0]
+    res.json({
+      ...created,
+      category: normalizeText(created.category),
+    })
   } catch (error) {
     console.error('Product create error:', error)
     res.status(500).json({ error: error.message })
@@ -117,7 +131,11 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Product not found' })
     }
 
-    res.json(result.rows[0])
+    const updated = result.rows[0]
+    res.json({
+      ...updated,
+      category: normalizeText(updated.category),
+    })
   } catch (error) {
     console.error('Product update error:', error)
     res.status(500).json({ error: error.message })

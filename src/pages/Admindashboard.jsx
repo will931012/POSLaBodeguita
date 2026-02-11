@@ -47,6 +47,7 @@ export default function AdminDashboard() {
   const [announcementTitle, setAnnouncementTitle] = useState('')
   const [announcementMessage, setAnnouncementMessage] = useState('')
   const [announcementSending, setAnnouncementSending] = useState(false)
+  const [activeTab, setActiveTab] = useState('ventas')
   const [todaySales, setTodaySales] = useState({
     count: 0,
     revenue: 0,
@@ -338,59 +339,147 @@ export default function AdminDashboard() {
           </form>
         </div>
 
+        <div className="bg-white/90 backdrop-blur rounded-2xl border border-purple-100 p-2 shadow-sm">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveTab('ventas')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'ventas'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-600 hover:bg-purple-50'
+              }`}
+            >
+              Ventas
+            </button>
+            <button
+              onClick={() => setActiveTab('perfumes')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'perfumes'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-600 hover:bg-purple-50'
+              }`}
+            >
+              Ventas de Perfumes
+            </button>
+            <button
+              onClick={() => setActiveTab('top')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'top'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-600 hover:bg-purple-50'
+              }`}
+            >
+              Top Productos
+            </button>
+            <button
+              onClick={() => setActiveTab('mensaje')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'mensaje'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-600 hover:bg-purple-50'
+              }`}
+            >
+              Mensaje Global
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="spinner"></div>
           </div>
         ) : (
           <>
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                icon={ShoppingBag}
-                label="Total Ventas"
-                value={summary.totalSales || 0}
-                color="purple"
-                delay={0}
-              />
-              <StatCard
-                icon={DollarSign}
-                label="Ingresos Totales"
-                value={`$${(summary.totalRevenue || 0).toFixed(2)}`}
-                color="green"
-                delay={0.1}
-              />
-              <StatCard
-                icon={Sparkles}
-                label="Ventas de Perfumes"
-                value={summary.perfumeSales || 0}
-                color="pink"
-                delay={0.2}
-                badge={`${perfumePercentage}%`}
-              />
-              <StatCard
-                icon={TrendingUp}
-                label="Ingresos Perfumes"
-                value={`$${(summary.perfumeRevenue || 0).toFixed(2)}`}
-                color="amber"
-                delay={0.3}
-              />
-            </div>
+            {activeTab === 'ventas' && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard
+                    icon={ShoppingBag}
+                    label="Total Ventas"
+                    value={summary.totalSales || 0}
+                    color="purple"
+                    delay={0}
+                  />
+                  <StatCard
+                    icon={DollarSign}
+                    label="Ingresos Totales"
+                    value={`$${(summary.totalRevenue || 0).toFixed(2)}`}
+                    color="green"
+                    delay={0.1}
+                  />
+                  <StatCard
+                    icon={Sparkles}
+                    label="Ventas de Perfumes"
+                    value={summary.perfumeSales || 0}
+                    color="pink"
+                    delay={0.2}
+                    badge={`${perfumePercentage}%`}
+                  />
+                  <StatCard
+                    icon={TrendingUp}
+                    label="Ingresos Perfumes"
+                    value={`$${(summary.perfumeRevenue || 0).toFixed(2)}`}
+                    color="amber"
+                    delay={0.3}
+                  />
+                </div>
 
-            {/* Today's Sales */}
-            <TodaySales todaySales={todaySales} />
+                <TodaySales todaySales={todaySales} />
 
-            {/* Main Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <PerfumeSalesSection perfumeProducts={perfumeProducts} />
-              <CategoriesSection categoryData={categoryData} />
-            </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <CategoriesSection categoryData={categoryData} />
+                </div>
+              </>
+            )}
 
-            {/* Top Products */}
-            <TopProductsTable topProducts={topProducts} />
+            {activeTab === 'perfumes' && (
+              <>
+                <PerfumeSalesSection perfumeProducts={perfumeProducts} />
+                <PerfumesInventory allPerfumes={allPerfumes} />
+              </>
+            )}
 
-            {/* All Perfumes Inventory */}
-            <PerfumesInventory allPerfumes={allPerfumes} />
+            {activeTab === 'top' && (
+              <TopProductsTable topProducts={topProducts} />
+            )}
+
+            {activeTab === 'mensaje' && (
+              <div className="bg-white/90 backdrop-blur rounded-2xl border border-purple-100 p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-gray-900">Mensaje global</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Envía un aviso que se mostrará una sola vez a todos los usuarios.
+                </p>
+                <form onSubmit={handleAnnouncementSubmit} className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Título (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={announcementTitle}
+                      onChange={(e) => setAnnouncementTitle(e.target.value)}
+                      placeholder="Aviso importante"
+                      className="w-full px-4 py-2 rounded-xl border-2 border-purple-200 bg-white text-gray-700 focus:outline-none focus:border-purple-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Mensaje
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={announcementMessage}
+                      onChange={(e) => setAnnouncementMessage(e.target.value)}
+                      placeholder="Se ha cambiado el precio de..."
+                      className="w-full px-4 py-2 rounded-xl border-2 border-purple-200 bg-white text-gray-700 focus:outline-none focus:border-purple-500 transition-colors"
+                    />
+                  </div>
+                  <Button type="submit" loading={announcementSending}>
+                    Enviar a todos
+                  </Button>
+                </form>
+              </div>
+            )}
           </>
         )}
       </div>
