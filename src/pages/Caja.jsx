@@ -129,9 +129,10 @@ export default function Caja() {
   // QUICK ADD
   // ============================================
   const quickAddPrice = (price) => {
+    const quickId = -Math.round(price * 100)
     const tempProduct = {
-      id: -Date.now(),
-      name: `$${price.toFixed(2)} Product`,
+      id: quickId,
+      name: `$${price.toFixed(2)}`,
       price: price,
       qty: 999999,
       temp: true,
@@ -426,7 +427,6 @@ export default function Caja() {
           td { padding: 4px 0; }
           .right { text-align: right; }
           .total { font-weight: bold; font-size: 14px; }
-          .temp-badge { background: #fbbf24; color: #000; padding: 1px 4px; font-size: 9px; border-radius: 3px; }
           .footer { margin-top: 12px; font-size: 11px; }
           .verse { font-style: italic; }
           @media print {
@@ -444,7 +444,7 @@ export default function Caja() {
           ${items.map(item => `
             <tr>
               <td>
-                ${item.name}${item.temp ? ' <span class="temp-badge">TEMP</span>' : ''}
+                ${item.name}
                 <br><small>${item.qty} x $${item.price.toFixed(2)}</small>
               </td>
               <td class="right">$${(item.qty * item.price).toFixed(2)}</td>

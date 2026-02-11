@@ -59,11 +59,6 @@ export default function CartSidebar({
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <div className="font-semibold">{product.name}</div>
-                        {product.temp && (
-                          <span className="inline-block px-2 py-1 bg-yellow-200 text-yellow-900 text-xs rounded mt-1">
-                            TEMP
-                          </span>
-                        )}
                       </div>
                       <button
                         onClick={() => onRemoveFromCart(product.id)}
