@@ -1,9 +1,22 @@
 const { query } = require('../config/database')
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function initDatabase() {
   console.log('🔧 Initializing PostgreSQL database...')
 
-  try {
+  const maxAttempts = 8
+  let attempt = 0
+
+  while (attempt < maxAttempts) {
+    try {
+      attempt += 1
+      if (attempt > 1) {
+        console.log(`⏳ Waiting for database... attempt ${attempt}/${maxAttempts}`)
+      }
+
     // Products table
     await query(`
       CREATE TABLE IF NOT EXISTS products (
@@ -107,9 +120,18 @@ async function initDatabase() {
 
     console.log('🎉 Database initialized successfully!')
     return true
-  } catch (error) {
-    console.error('❌ Database initialization failed:', error.message)
-    throw error
+    } catch (error) {
+      const shouldRetry = attempt < maxAttempts
+      const delayMs = Math.min(30000, 1000 * Math.pow(2, attempt - 1))
+      console.error('❌ Database initialization failed:', error.message)
+
+      if (!shouldRetry) {
+        throw error
+      }
+
+      console.log(`⏳ Retrying in ${Math.round(delayMs / 1000)}s...`)
+      await sleep(delayMs)
+    }
   }
 }
 

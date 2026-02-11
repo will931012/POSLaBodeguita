@@ -1,14 +1,17 @@
 const { Pool } = require('pg')
 
 // Railway provides DATABASE_URL automatically
+const pgSslMode = (process.env.PGSSLMODE || '').toLowerCase()
+const connectionString = process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_URL
+const sslEnabled = pgSslMode === 'require'
+  || (pgSslMode !== 'disable' && (process.env.NODE_ENV === 'production' || !!connectionString))
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' 
-    ? { rejectUnauthorized: false } 
-    : false,
+  connectionString,
+  ssl: sslEnabled ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 })
 
 pool.on('connect', () => {
