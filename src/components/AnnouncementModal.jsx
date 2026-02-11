@@ -45,7 +45,12 @@ export default function AnnouncementModal() {
     }
 
     loadAnnouncement()
-    return () => controller.abort()
+    const intervalId = setInterval(loadAnnouncement, 5000)
+
+    return () => {
+      clearInterval(intervalId)
+      controller.abort()
+    }
   }, [token])
 
   const dismissAnnouncement = async () => {
