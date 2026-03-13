@@ -1,47 +1,36 @@
-import { motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
-import Card from '@components/Card'
-import PerfumeRow from './PerfumeRow.jsx'
+import ExcelTableCard from './ExcelTableCard.jsx'
 
 export default function PerfumeSalesSection({ perfumeProducts }) {
-  const maxRevenue = perfumeProducts.reduce((max, p) => {
-    const revenue = parseFloat(p.revenue) || 0
-    return revenue > max ? revenue : max
-  }, 0)
+  const rows = perfumeProducts.slice(0, 15).map((product, index) => ({
+    key: product.id,
+    rank: index + 1,
+    name: product.name,
+    category: product.category || 'Sin categoria',
+    unitsSold: Number(product.units_sold) || 0,
+    revenue: `$${(Number(product.revenue) || 0).toFixed(2)}`,
+    avgPrice: `$${(Number(product.avg_price) || 0).toFixed(2)}`,
+    stock: Number(product.current_stock) || 0,
+  }))
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4 }}
-      className="lg:col-span-2"
-    >
-      <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Perfumes más Vendidos</h2>
-            <p className="text-sm text-gray-600">Rendimiento por producto</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {perfumeProducts.length === 0 ? (
-            <p className="text-center py-8 text-gray-500">No hay datos de perfumes</p>
-          ) : (
-            perfumeProducts.slice(0, 10).map((product, index) => (
-              <PerfumeRow
-                key={product.id}
-                product={product}
-                rank={index + 1}
-                maxRevenue={maxRevenue || 1}
-              />
-            ))
-          )}
-        </div>
-      </Card>
-    </motion.div>
+    <div className="lg:col-span-2">
+      <ExcelTableCard
+        title="Perfumes mas vendidos"
+        subtitle="Rendimiento por producto en formato de tabla"
+        icon={Sparkles}
+        headers={[
+          { key: 'rank', label: '#' },
+          { key: 'name', label: 'Producto' },
+          { key: 'category', label: 'Categoria' },
+          { key: 'unitsSold', label: 'Vendidas', cellClassName: 'font-mono' },
+          { key: 'revenue', label: 'Ingresos', cellClassName: 'font-mono' },
+          { key: 'avgPrice', label: 'Promedio', cellClassName: 'font-mono' },
+          { key: 'stock', label: 'Stock', cellClassName: 'font-mono' },
+        ]}
+        rows={rows}
+        emptyMessage="No hay datos de perfumes"
+      />
+    </div>
   )
 }

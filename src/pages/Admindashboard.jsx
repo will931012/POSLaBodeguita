@@ -19,6 +19,8 @@ import PerfumeSalesSection from '@/components/admin/PerfumeSalesSection.jsx'
 import CategoriesSection from '@/components/admin/CategoriesSection.jsx'
 import TopProductsTable from '@/components/admin/TopProductsTable.jsx'
 import PerfumesInventory from '@/components/admin/PerfumesInventory.jsx'
+import MetricsTable from '@/components/admin/MetricsTable.jsx'
+import LocationBreakdownTable from '@/components/admin/LocationBreakdownTable.jsx'
 import Button from '@/components/Button.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -44,6 +46,7 @@ export default function AdminDashboard() {
   const [perfumeProducts, setPerfumeProducts] = useState([])
   const [topProducts, setTopProducts] = useState([])
   const [allPerfumes, setAllPerfumes] = useState([])
+  const [locationBreakdown, setLocationBreakdown] = useState([])
   const [announcementTitle, setAnnouncementTitle] = useState('')
   const [announcementMessage, setAnnouncementMessage] = useState('')
   const [announcementSending, setAnnouncementSending] = useState(false)
@@ -76,7 +79,7 @@ export default function AdminDashboard() {
       const { startDate, endDate } = getDateRange(dateRange)
       const params = new URLSearchParams({ startDate, endDate })
 
-      const [summaryRes, categoryRes, perfumeRes, topRes] = await Promise.all([
+      const [summaryRes, categoryRes, perfumeRes, topRes, locationRes] = await Promise.all([
         fetch(`${API}/api/analytics/dashboard-summary?${params}`, {
           headers: { Authorization: `Bearer ${token}` },
           signal
@@ -92,6 +95,10 @@ export default function AdminDashboard() {
         fetch(`${API}/api/analytics/top-products?limit=5&${params}`, {
           headers: { Authorization: `Bearer ${token}` },
           signal
+        }),
+        fetch(`${API}/api/analytics/location-breakdown?${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         })
       ])
 
@@ -104,6 +111,7 @@ export default function AdminDashboard() {
       const categoryList = categoryRes.ok ? await categoryRes.json() : []
       const perfumeList = perfumeRes.ok ? await perfumeRes.json() : []
       const topList = topRes.ok ? await topRes.json() : []
+      const locationList = locationRes.ok ? await locationRes.json() : []
 
       setSummary({
         totalSales: summaryData.totalSales || 0,
@@ -116,6 +124,7 @@ export default function AdminDashboard() {
       setCategoryData(categoryList)
       setPerfumeProducts(perfumeList)
       setTopProducts(topList)
+      setLocationBreakdown(locationList)
     } catch (error) {
       if (isAbortError(error)) return
       console.error('Dashboard load error:', error)
@@ -286,6 +295,10 @@ export default function AdminDashboard() {
             Analítica de Ventas • Enfoque en Perfumes
           </p>
 
+          <p className="text-sm font-medium text-purple-700">
+            Vista consolidada de las 3 ubicaciones
+          </p>
+
           {/* Date Range Filter */}
           <div className="mt-6 flex items-center justify-center gap-3">
             <Calendar className="w-5 h-5 text-gray-500" />
@@ -389,6 +402,12 @@ export default function AdminDashboard() {
                 </div>
 
                 <TodaySales todaySales={todaySales} />
+                <MetricsTable
+                  summary={summary}
+                  todaySales={todaySales}
+                  perfumePercentage={perfumePercentage}
+                />
+                <LocationBreakdownTable locations={locationBreakdown} />
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <CategoriesSection categoryData={categoryData} />
