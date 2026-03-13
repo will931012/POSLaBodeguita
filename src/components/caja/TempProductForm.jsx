@@ -4,7 +4,7 @@ import { PackagePlus, Plus, X } from 'lucide-react'
 import Input from '@components/Input'
 import Button from '@components/Button'
 
-export default function TempProductForm({ tempForm, setTempForm, onSubmit }) {
+export default function TempProductForm({ tempForm, setTempForm, onSubmit, shortcutSignal = 0 }) {
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
@@ -19,6 +19,11 @@ export default function TempProductForm({ tempForm, setTempForm, onSubmit }) {
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [showModal])
+
+  useEffect(() => {
+    if (!shortcutSignal) return
+    setShowModal(true)
+  }, [shortcutSignal])
 
   const closeModal = () => {
     setShowModal(false)

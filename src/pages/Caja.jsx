@@ -12,6 +12,7 @@ import TempProductForm from '@/components/caja/TempProductForm'
 import CartSidebar from '@/components/caja/CartSidebar'
 import TicketModal from '@/components/caja/TicketModal'
 import CustomerQuickRegister from '@/components/caja/CustomerQuickRegister'
+import ScanErrorModal from '@/components/caja/ScanErrorModal'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const CART_STORAGE_KEY = 'pos_active_sale'
@@ -50,10 +51,48 @@ export default function Caja() {
   const [showTicketModal, setShowTicketModal] = useState(false)
   const [pendingReceipt, setPendingReceipt] = useState(null)
   const [verse, setVerse] = useState(null)
+  const [tempShortcutSignal, setTempShortcutSignal] = useState(0)
+  const [customerShortcutSignal, setCustomerShortcutSignal] = useState(0)
+  const [scanErrorMessage, setScanErrorMessage] = useState('')
+  const [showScanErrorModal, setShowScanErrorModal] = useState(false)
   
   // Refs
   const searchTimerRef = useRef(null)
   const searchInputRef = useRef(null)
+
+  const playErrorSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext
+      if (!AudioContextClass) return
+
+      const audioContext = new AudioContextClass()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+
+      oscillator.type = 'square'
+      oscillator.frequency.setValueAtTime(220, audioContext.currentTime)
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+
+      gainNode.gain.setValueAtTime(0.001, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.18, audioContext.currentTime + 0.01)
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.28)
+
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.28)
+      oscillator.onended = () => {
+        audioContext.close().catch(() => {})
+      }
+    } catch (error) {
+      console.error('Error reproduciendo sonido:', error)
+    }
+  }
+
+  const showScanError = (message) => {
+    playErrorSound()
+    setScanErrorMessage(message)
+    setShowScanErrorModal(true)
+  }
 
   // ============================================
   // PERSISTENCE
@@ -126,6 +165,44 @@ export default function Caja() {
     }
   }, [mode, cart, products, tempProducts, paymentMethod, cashReceived])
 
+  useEffect(() => {
+    const isEditableTarget = (target) => {
+      if (!target) return false
+      const tagName = target.tagName?.toLowerCase()
+      return (
+        tagName === 'input'
+        || tagName === 'textarea'
+        || tagName === 'select'
+        || target.isContentEditable
+      )
+    }
+
+    const handleKeyDown = (event) => {
+      if (mode !== 'active') return
+      if (event.altKey || event.ctrlKey || event.metaKey) return
+
+      if (event.key === 'F2') {
+        event.preventDefault()
+        setTempShortcutSignal((current) => current + 1)
+        return
+      }
+
+      if (event.key === 'F3') {
+        event.preventDefault()
+        setCustomerShortcutSignal((current) => current + 1)
+        return
+      }
+
+      if (event.key === 'Enter' && !isEditableTarget(event.target) && !showTicketModal) {
+        event.preventDefault()
+        completeSale()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [mode, showTicketModal, cart, paymentMethod, cashReceived, products, tempProducts, isCompletingSale])
+
   // ============================================
   // QUICK ADD
   // ============================================
@@ -183,7 +260,7 @@ export default function Caja() {
         setSearchResults([])
         searchInputRef.current?.focus()
       } else {
-        toast.error(`Producto no encontrado: ${searchQuery}`)
+        showScanError(`No se encontro el producto: ${searchQuery}`)
       }
     }
   }
@@ -563,8 +640,12 @@ export default function Caja() {
                 tempForm={tempForm}
                 setTempForm={setTempForm}
                 onSubmit={addTempProduct}
+                shortcutSignal={tempShortcutSignal}
               />
-              <CustomerQuickRegister token={token} />
+              <CustomerQuickRegister
+                token={token}
+                shortcutSignal={customerShortcutSignal}
+              />
             </div>
 
             <QuickAddPad onQuickAdd={quickAddPrice} />
@@ -604,6 +685,15 @@ export default function Caja() {
       <TicketModal
         show={showTicketModal}
         onResponse={handleTicketResponse}
+      />
+      <ScanErrorModal
+        show={showScanErrorModal}
+        message={scanErrorMessage}
+        onClose={() => {
+          setShowScanErrorModal(false)
+          setScanErrorMessage('')
+          searchInputRef.current?.focus()
+        }}
       />
     </>
   )

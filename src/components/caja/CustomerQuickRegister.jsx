@@ -7,7 +7,7 @@ import Button from '@components/Button'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-export default function CustomerQuickRegister({ token }) {
+export default function CustomerQuickRegister({ token, shortcutSignal = 0 }) {
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({
     name: '',
@@ -28,6 +28,11 @@ export default function CustomerQuickRegister({ token }) {
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [showModal, saving])
+
+  useEffect(() => {
+    if (!shortcutSignal) return
+    setShowModal(true)
+  }, [shortcutSignal])
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }))
