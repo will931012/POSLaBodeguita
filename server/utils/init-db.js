@@ -112,6 +112,42 @@ async function initDatabase() {
     `)
     console.log('✅ Announcement reads table ready')
 
+    // Customers table
+    await query(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        phone VARCHAR(50) UNIQUE,
+        accepts_email BOOLEAN NOT NULL DEFAULT true,
+        accepts_whatsapp BOOLEAN NOT NULL DEFAULT true,
+        active BOOLEAN NOT NULL DEFAULT true,
+        registered_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    console.log('✅ Customers table ready')
+
+    // Customer campaigns table
+    await query(`
+      CREATE TABLE IF NOT EXISTS customer_campaigns (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        channel VARCHAR(20) NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'draft',
+        recipient_count INTEGER NOT NULL DEFAULT 0,
+        sent_count INTEGER NOT NULL DEFAULT 0,
+        failed_count INTEGER NOT NULL DEFAULT 0,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    console.log('✅ Customer campaigns table ready')
+
     // Create indexes
     await query(`
       CREATE INDEX IF NOT EXISTS idx_products_upc ON products(upc);
@@ -123,6 +159,10 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_closures_day ON closures(day);
       CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at);
       CREATE INDEX IF NOT EXISTS idx_announcement_reads_user_id ON announcement_reads(user_id);
+      CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
+      CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+      CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+      CREATE INDEX IF NOT EXISTS idx_customer_campaigns_created_at ON customer_campaigns(created_at);
     `)
     console.log('✅ Indexes created')
 

@@ -21,6 +21,7 @@ import TopProductsTable from '@/components/admin/TopProductsTable.jsx'
 import PerfumesInventory from '@/components/admin/PerfumesInventory.jsx'
 import MetricsTable from '@/components/admin/MetricsTable.jsx'
 import LocationBreakdownTable from '@/components/admin/LocationBreakdownTable.jsx'
+import CustomerCampaignsTab from '@/components/admin/CustomerCampaignsTab.jsx'
 import Button from '@/components/Button.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -358,6 +359,16 @@ export default function AdminDashboard() {
             >
               Mensaje Global
             </button>
+            <button
+              onClick={() => setActiveTab('clientes')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'clientes'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-600 hover:bg-purple-50'
+              }`}
+            >
+              Clientes
+            </button>
           </div>
         </div>
 
@@ -462,6 +473,10 @@ export default function AdminDashboard() {
                   </Button>
                 </form>
               </div>
+            )}
+
+            {activeTab === 'clientes' && (
+              <CustomerCampaignsTab token={token} active={activeTab === 'clientes'} />
             )}
           </>
         )}

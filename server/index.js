@@ -79,7 +79,7 @@ try {
   process.exit(1)
 }
 
-let productsRouter, salesRouter, receiptsRouter, reportsRouter, importRouter, analyticsRouter, announcementsRouter
+let productsRouter, salesRouter, receiptsRouter, reportsRouter, importRouter, analyticsRouter, announcementsRouter, customersRouter
 
 try {
   productsRouter = require('./routes/products')
@@ -89,6 +89,7 @@ try {
   importRouter = require('./routes/import')
   analyticsRouter = require('./routes/analytics')
   announcementsRouter = require('./routes/announcements')
+  customersRouter = require('./routes/customers')
   console.log('✅ All routes loaded')
 } catch (error) {
   console.error('❌ ERROR loading routes:', error.message)
@@ -108,6 +109,7 @@ app.use('/api/sales', verifyToken, salesRouter)
 app.use('/api/receipts', verifyToken, receiptsRouter)
 app.use('/report', verifyToken, reportsRouter)
 app.use('/api/announcements', verifyToken, announcementsRouter)
+app.use('/api/customers', verifyToken, customersRouter)
 
 // Admin/Manager only
 app.use('/api/import', verifyToken, requireRole(['admin', 'manager']), importRouter)

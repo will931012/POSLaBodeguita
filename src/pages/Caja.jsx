@@ -11,6 +11,7 @@ import ProductScanner from '@/components/caja/ProductScanner'
 import TempProductForm from '@/components/caja/TempProductForm'
 import CartSidebar from '@/components/caja/CartSidebar'
 import TicketModal from '@/components/caja/TicketModal'
+import CustomerQuickRegister from '@/components/caja/CustomerQuickRegister'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const CART_STORAGE_KEY = 'pos_active_sale'
@@ -557,6 +558,8 @@ export default function Caja() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+            <CustomerQuickRegister token={token} />
+
             <QuickAddPad onQuickAdd={quickAddPrice} />
             
             <ProductScanner
