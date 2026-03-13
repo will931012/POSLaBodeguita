@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Copy, Mail, MessageSquare, RefreshCw, Search, Users } from 'lucide-react'
+import { Mail, MessageSquare, RefreshCw, Search, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '@components/Card'
 import Button from '@components/Button'
@@ -13,7 +13,6 @@ export default function CustomerCampaignsTab({ token, active }) {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
-  const [lastWhatsappLinks, setLastWhatsappLinks] = useState([])
   const [form, setForm] = useState({
     title: '',
     channel: 'email',
@@ -76,7 +75,6 @@ export default function CustomerCampaignsTab({ token, active }) {
 
     try {
       setSending(true)
-      setLastWhatsappLinks([])
 
       const response = await fetch(`${API}/api/customers/campaigns/send`, {
         method: 'POST',
@@ -92,12 +90,7 @@ export default function CustomerCampaignsTab({ token, active }) {
         throw new Error(data.error || 'No se pudo enviar la campana')
       }
 
-      if (form.channel === 'whatsapp') {
-        setLastWhatsappLinks(data.links || [])
-        toast.success(`Enlaces de WhatsApp generados para ${data.links?.length || 0} clientes`)
-      } else {
-        toast.success(`Campana enviada. Exitosos: ${data.sentCount || 0}`)
-      }
+      toast.success(`Campana enviada. Exitosos: ${data.sentCount || 0}`)
 
       setForm({
         title: '',
@@ -110,17 +103,6 @@ export default function CustomerCampaignsTab({ token, active }) {
       toast.error(error.message || 'Error enviando campana')
     } finally {
       setSending(false)
-    }
-  }
-
-  const copyWhatsappLinks = async () => {
-    try {
-      await navigator.clipboard.writeText(
-        lastWhatsappLinks.map((item) => `${item.name}: ${item.url}`).join('\n')
-      )
-      toast.success('Enlaces copiados')
-    } catch (error) {
-      toast.error('No se pudieron copiar los enlaces')
     }
   }
 
@@ -213,7 +195,7 @@ export default function CustomerCampaignsTab({ token, active }) {
           <div>
             <h2 className="text-xl font-bold text-slate-900">Campanas de clientes</h2>
             <p className="text-sm text-slate-600">
-              Envia ofertas y avisos de mercancia nueva por email o genera enlaces de WhatsApp
+              Envia ofertas y avisos de mercancia nueva por email o SMS
             </p>
           </div>
         </div>
@@ -236,7 +218,7 @@ export default function CustomerCampaignsTab({ token, active }) {
                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 font-medium focus:outline-none focus:border-primary-600"
               >
                 <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
+                <option value="sms">SMS</option>
               </select>
             </div>
           </div>
@@ -256,57 +238,11 @@ export default function CustomerCampaignsTab({ token, active }) {
 
           <div className="flex justify-end">
             <Button type="submit" loading={sending}>
-              {form.channel === 'email' ? 'Enviar emails' : 'Generar mensajes'}
+              {form.channel === 'email' ? 'Enviar emails' : 'Enviar SMS'}
             </Button>
           </div>
         </form>
       </Card>
-
-      {lastWhatsappLinks.length > 0 && (
-        <Card className="border border-emerald-200 shadow-sm">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Enlaces de WhatsApp</h2>
-              <p className="text-sm text-slate-600">
-                Listos para copiar o abrir manualmente
-              </p>
-            </div>
-            <Button type="button" variant="outline" onClick={copyWhatsappLinks} icon={Copy}>
-              Copiar enlaces
-            </Button>
-          </div>
-
-          <div className="overflow-x-auto rounded-lg border border-slate-300">
-            <table className="w-full border-collapse text-sm">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Cliente</th>
-                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Telefono</th>
-                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Enlace</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lastWhatsappLinks.map((item, index) => (
-                  <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                    <td className="border border-slate-300 px-3 py-2">{item.name}</td>
-                    <td className="border border-slate-300 px-3 py-2">{item.phone}</td>
-                    <td className="border border-slate-300 px-3 py-2">
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-primary-700 underline break-all"
-                      >
-                        {item.url}
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
 
       <Card className="border border-slate-200 shadow-sm">
         <h2 className="text-xl font-bold text-slate-900 mb-4">Historial de campanas</h2>

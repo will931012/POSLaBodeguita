@@ -15,11 +15,15 @@ import Button from '@components/Button'
 export default function CartSidebar({
   cart,
   allProducts,
+  discountPercent,
+  setDiscountPercent,
   paymentMethod,
   setPaymentMethod,
   cashReceived,
   setCashReceived,
   subtotal,
+  discountAmount,
+  finalTotal,
   cashReceivedNum,
   changeDue,
   shortfall,
@@ -34,6 +38,8 @@ export default function CartSidebar({
     const num = parseFloat(val)
     return isNaN(num) ? 0 : num
   }
+
+  const discountOptions = [0, 5, 10, 15]
 
   return (
     <div className="lg:sticky lg:top-24 space-y-6">
@@ -111,9 +117,19 @@ export default function CartSidebar({
           </div>
 
           <div className="border-t-2 border-gray-200 pt-4">
+            <div className="space-y-1 mb-3">
+              <div className="flex justify-between items-center text-sm font-semibold text-gray-600">
+                <span>Subtotal</span>
+                <span className="font-mono">${subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm font-semibold text-red-500">
+                <span>Descuento</span>
+                <span className="font-mono">-${discountAmount.toFixed(2)}</span>
+              </div>
+            </div>
             <div className="flex justify-between items-center text-2xl font-bold">
               <span>TOTAL</span>
-              <span className="font-mono text-primary-600">${subtotal.toFixed(2)}</span>
+              <span className="font-mono text-primary-600">${finalTotal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -179,6 +195,28 @@ export default function CartSidebar({
           )}
 
           <div className="space-y-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                Descuento
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {discountOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setDiscountPercent(option)}
+                    className={`rounded-xl py-2 text-sm font-bold transition-all touch-manipulation active:scale-95 ${
+                      discountPercent === option
+                        ? 'bg-amber-500 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {option}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Button
               className="w-full touch-manipulation"
               size="lg"

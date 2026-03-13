@@ -6,6 +6,7 @@ import { Toaster } from 'sonner'
 // Auth Pages (no lazy - needed immediately)
 import LocationSelector from './pages/LocationSelector'
 import Login from './pages/Login'
+import SmsConsent from './pages/SmsConsent'
 
 // Layout components (no lazy - needed for all routes)
 import Layout from './components/Layout'
@@ -51,6 +52,7 @@ function AppRoutes() {
           isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
         }
       />
+      <Route path="/sms-consent" element={<SmsConsent />} />
 
       {/* Protected layout */}
       <Route

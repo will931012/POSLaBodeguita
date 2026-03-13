@@ -43,6 +43,7 @@ export default function Caja() {
   // Payment State
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [cashReceived, setCashReceived] = useState('')
+  const [discountPercent, setDiscountPercent] = useState(0)
   
   // Form State
   const [tempForm, setTempForm] = useState({ name: '', price: '', qty: '1' })
@@ -122,6 +123,7 @@ export default function Caja() {
           setTempProducts(data.tempProducts || [])
           setPaymentMethod(data.paymentMethod || 'card')
           setCashReceived(data.cashReceived || '')
+          setDiscountPercent(data.discountPercent || 0)
           
           if (Object.keys(data.cart || {}).length > 0) {
             toast.success('Venta activa restaurada')
@@ -157,13 +159,14 @@ export default function Caja() {
         tempProducts,
         paymentMethod,
         cashReceived,
+        discountPercent,
         timestamp: Date.now(),
       }
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(dataToSave))
     } else if (mode === 'idle') {
       localStorage.removeItem(CART_STORAGE_KEY)
     }
-  }, [mode, cart, products, tempProducts, paymentMethod, cashReceived])
+  }, [mode, cart, products, tempProducts, paymentMethod, cashReceived, discountPercent])
 
   useEffect(() => {
     const isEditableTarget = (target) => {
@@ -347,6 +350,7 @@ export default function Caja() {
     setTempProducts([])
     setPaymentMethod('card')
     setCashReceived('')
+    setDiscountPercent(0)
     localStorage.removeItem(CART_STORAGE_KEY)
     toast.info('Carrito vaciado')
   }
@@ -380,9 +384,12 @@ export default function Caja() {
     return sum + (toNumber(product.price) * qty)
   }, 0)
 
+  const discountAmount = subtotal * (discountPercent / 100)
+  const finalTotal = Math.max(0, subtotal - discountAmount)
+
   const cashReceivedNum = toNumber(cashReceived)
-  const changeDue = paymentMethod === 'cash' ? Math.max(0, cashReceivedNum - subtotal) : 0
-  const shortfall = paymentMethod === 'cash' ? Math.max(0, subtotal - cashReceivedNum) : 0
+  const changeDue = paymentMethod === 'cash' ? Math.max(0, cashReceivedNum - finalTotal) : 0
+  const shortfall = paymentMethod === 'cash' ? Math.max(0, finalTotal - cashReceivedNum) : 0
 
   // ============================================
   // COMPLETE SALE
@@ -423,7 +430,7 @@ export default function Caja() {
             cash_received: paymentMethod === 'cash' ? cashReceivedNum : null,
             change_due: paymentMethod === 'cash' ? changeDue : 0,
           },
-          override_total: subtotal,
+          override_total: finalTotal,
         }),
       })
 
@@ -533,8 +540,14 @@ export default function Caja() {
         <table>
           <tr class="total">
             <td>TOTAL</td>
-            <td class="right">$${subtotal.toFixed(2)}</td>
+            <td class="right">$${finalTotal.toFixed(2)}</td>
           </tr>
+          ${discountPercent > 0 ? `
+            <tr>
+              <td>Descuento (${discountPercent}%)</td>
+              <td class="right">-$${discountAmount.toFixed(2)}</td>
+            </tr>
+          ` : ''}
           ${paymentMethod === 'cash' ? `
             <tr>
               <td>Efectivo</td>
@@ -667,9 +680,13 @@ export default function Caja() {
             allProducts={allProducts}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
+            discountPercent={discountPercent}
+            setDiscountPercent={setDiscountPercent}
             cashReceived={cashReceived}
             setCashReceived={setCashReceived}
             subtotal={subtotal}
+            discountAmount={discountAmount}
+            finalTotal={finalTotal}
             cashReceivedNum={cashReceivedNum}
             changeDue={changeDue}
             shortfall={shortfall}

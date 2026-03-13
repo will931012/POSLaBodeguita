@@ -120,6 +120,7 @@ async function initDatabase() {
         email VARCHAR(255) UNIQUE,
         phone VARCHAR(50) UNIQUE,
         accepts_email BOOLEAN NOT NULL DEFAULT true,
+        accepts_sms BOOLEAN NOT NULL DEFAULT true,
         accepts_whatsapp BOOLEAN NOT NULL DEFAULT true,
         active BOOLEAN NOT NULL DEFAULT true,
         registered_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
@@ -129,6 +130,11 @@ async function initDatabase() {
       )
     `)
     console.log('✅ Customers table ready')
+
+    await query(`
+      ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS accepts_sms BOOLEAN NOT NULL DEFAULT true
+    `)
 
     // Customer campaigns table
     await query(`

@@ -2,6 +2,7 @@ const express = require('express')
 const { query } = require('../config/database')
 const { requireRole } = require('./auth')
 const { isMailConfigured, sendEmail } = require('../utils/mailer')
+const { isSmsConfigured, sendSms } = require('../utils/messaging')
 
 const router = express.Router()
 
@@ -15,10 +16,6 @@ function normalizeEmail(email) {
 function normalizePhone(phone) {
   if (!phone || !phone.trim()) return null
   return phone.replace(/[^\d+]/g, '').trim() || null
-}
-
-function normalizeWhatsappPhone(phone) {
-  return (phone || '').replace(/\D/g, '')
 }
 
 function buildCampaignEmail({ customerName, title, message }) {
@@ -54,6 +51,7 @@ router.get('/', requireRole(['admin', 'manager']), async (req, res) => {
         c.email,
         c.phone,
         c.accepts_email,
+        c.accepts_sms,
         c.accepts_whatsapp,
         c.created_at,
         l.name as registered_location_name
@@ -92,6 +90,7 @@ router.post('/', async (req, res) => {
       email,
       phone,
       accepts_email = true,
+      accepts_sms = true,
       accepts_whatsapp = true,
     } = req.body || {}
 
@@ -134,12 +133,21 @@ router.post('/', async (req, res) => {
           email = COALESCE($2, email),
           phone = COALESCE($3, phone),
           accepts_email = $4,
-          accepts_whatsapp = $5,
+          accepts_sms = $5,
+          accepts_whatsapp = $6,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $6
-        RETURNING id, name, email, phone, accepts_email, accepts_whatsapp, created_at, updated_at
+        WHERE id = $7
+        RETURNING id, name, email, phone, accepts_email, accepts_sms, accepts_whatsapp, created_at, updated_at
         `,
-        [cleanName, cleanEmail, cleanPhone, Boolean(accepts_email), Boolean(accepts_whatsapp), existing.rows[0].id]
+        [
+          cleanName,
+          cleanEmail,
+          cleanPhone,
+          Boolean(accepts_email),
+          Boolean(accepts_sms),
+          Boolean(accepts_whatsapp),
+          existing.rows[0].id
+        ]
       )
 
       return res.json({
@@ -155,18 +163,20 @@ router.post('/', async (req, res) => {
         email,
         phone,
         accepts_email,
+        accepts_sms,
         accepts_whatsapp,
         registered_location_id,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, name, email, phone, accepts_email, accepts_whatsapp, created_at
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, name, email, phone, accepts_email, accepts_sms, accepts_whatsapp, created_at
       `,
       [
         cleanName,
         cleanEmail,
         cleanPhone,
         Boolean(accepts_email),
+        Boolean(accepts_sms),
         Boolean(accepts_whatsapp),
         req.location?.id || null,
         req.user?.id || null,
@@ -215,7 +225,7 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
     const { title, message, channel = 'email' } = req.body || {}
     const cleanTitle = title?.trim() || 'Nueva oferta'
     const cleanMessage = message?.trim()
-    const cleanChannel = channel === 'whatsapp' ? 'whatsapp' : 'email'
+    const cleanChannel = channel === 'sms' ? 'sms' : 'email'
 
     if (!cleanMessage) {
       return res.status(400).json({ error: 'El mensaje es requerido' })
@@ -223,6 +233,10 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
 
     if (cleanChannel === 'email' && !isMailConfigured()) {
       return res.status(400).json({ error: 'SMTP no esta configurado para enviar emails' })
+    }
+
+    if (cleanChannel === 'sms' && !isSmsConfigured()) {
+      return res.status(400).json({ error: 'Twilio SMS no esta configurado' })
     }
 
     const recipientQuery = cleanChannel === 'email'
@@ -238,7 +252,7 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
         SELECT id, name, email, phone
         FROM customers
         WHERE active = true
-          AND accepts_whatsapp = true
+          AND accepts_sms = true
           AND phone IS NOT NULL
         ORDER BY name ASC
       `
@@ -276,39 +290,18 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
     const campaign = campaignInsert.rows[0]
 
     if (recipients.length === 0) {
-      return res.json({ campaign, recipients: [], links: [] })
-    }
-
-    if (cleanChannel === 'whatsapp') {
-      const links = recipients.map((recipient) => ({
-        id: recipient.id,
-        name: recipient.name,
-        phone: recipient.phone,
-        url: `https://wa.me/${normalizeWhatsappPhone(recipient.phone)}?text=${encodeURIComponent(`${cleanTitle}\n\n${cleanMessage}`)}`,
-      }))
-
-      const updated = await query(
-        `
-        UPDATE customer_campaigns
-        SET
-          status = 'generated',
-          sent_count = $1,
-          failed_count = 0,
-          metadata = $2::jsonb
-        WHERE id = $3
-        RETURNING id, title, channel, status, recipient_count, sent_count, failed_count, created_at
-        `,
-        [links.length, JSON.stringify({ links }), campaign.id]
-      )
-
-      return res.json({
-        campaign: updated.rows[0],
-        links,
-      })
+      return res.json({ campaign, recipients: [] })
     }
 
     const results = await Promise.allSettled(
       recipients.map((recipient) => {
+        if (cleanChannel === 'sms') {
+          return sendSms({
+            to: recipient.phone,
+            body: `${cleanTitle}\n\n${cleanMessage}`,
+          })
+        }
+
         const mail = buildCampaignEmail({
           customerName: recipient.name,
           title: cleanTitle,
@@ -350,6 +343,7 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
               id: recipient.id,
               name: recipient.name,
               email: recipient.email,
+              phone: recipient.phone,
               error: result.reason?.message || 'Error al enviar',
             })),
         }),
