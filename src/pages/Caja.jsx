@@ -558,7 +558,14 @@ export default function Caja() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <CustomerQuickRegister token={token} />
+            <div className="flex items-center justify-between gap-3">
+              <TempProductForm
+                tempForm={tempForm}
+                setTempForm={setTempForm}
+                onSubmit={addTempProduct}
+              />
+              <CustomerQuickRegister token={token} />
+            </div>
 
             <QuickAddPad onQuickAdd={quickAddPrice} />
             
@@ -572,11 +579,6 @@ export default function Caja() {
               searchInputRef={searchInputRef}
             />
 
-            <TempProductForm
-              tempForm={tempForm}
-              setTempForm={setTempForm}
-              onSubmit={addTempProduct}
-            />
           </div>
 
           <CartSidebar

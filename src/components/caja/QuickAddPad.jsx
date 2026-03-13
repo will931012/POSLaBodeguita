@@ -20,7 +20,7 @@ export default function QuickAddPad({ onQuickAdd }) {
             key={price}
             whileTap={{ scale: 0.95 }}
             onClick={() => onQuickAdd(price)}
-            className="aspect-square bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl font-bold text-lg shadow-md hover:shadow-lg transition-all active:scale-95 touch-manipulation select-none"
+            className="aspect-[1/0.92] bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl font-bold text-base md:text-lg shadow-md hover:shadow-lg transition-all active:scale-95 touch-manipulation select-none"
           >
             ${price < 1 ? price.toFixed(2) : price}
           </motion.button>
