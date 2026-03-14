@@ -222,10 +222,13 @@ router.get('/campaigns', requireRole('admin'), async (req, res) => {
 // ============================================
 router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
   try {
-    const { title, message, channel = 'email' } = req.body || {}
+    const { title, message, channel = 'email', recipient_ids = [] } = req.body || {}
     const cleanTitle = title?.trim() || 'Nueva oferta'
     const cleanMessage = message?.trim()
     const cleanChannel = channel === 'sms' ? 'sms' : 'email'
+    const recipientIds = Array.isArray(recipient_ids)
+      ? recipient_ids.map((id) => parseInt(id, 10)).filter(Number.isFinite)
+      : []
 
     if (!cleanMessage) {
       return res.status(400).json({ error: 'El mensaje es requerido' })
@@ -246,6 +249,7 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
         WHERE active = true
           AND accepts_email = true
           AND email IS NOT NULL
+          ${recipientIds.length > 0 ? 'AND id = ANY($1)' : ''}
         ORDER BY name ASC
       `
       : `
@@ -254,10 +258,14 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
         WHERE active = true
           AND accepts_sms = true
           AND phone IS NOT NULL
+          ${recipientIds.length > 0 ? 'AND id = ANY($1)' : ''}
         ORDER BY name ASC
       `
 
-    const recipientsResult = await query(recipientQuery)
+    const recipientsResult = await query(
+      recipientQuery,
+      recipientIds.length > 0 ? [recipientIds] : []
+    )
     const recipients = recipientsResult.rows
 
     const campaignInsert = await query(

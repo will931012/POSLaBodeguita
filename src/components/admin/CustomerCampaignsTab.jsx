@@ -10,6 +10,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 export default function CustomerCampaignsTab({ token, active }) {
   const [customers, setCustomers] = useState([])
   const [campaigns, setCampaigns] = useState([])
+  const [selectedRecipients, setSelectedRecipients] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
@@ -38,6 +39,15 @@ export default function CustomerCampaignsTab({ token, active }) {
 
       setCustomers(customersData)
       setCampaigns(campaignsData)
+      setSelectedRecipients((current) => {
+        if (current.length === 0) {
+          return customersData
+            .filter((customer) => ['yordanka', 'william'].includes(customer.name?.trim().toLowerCase()))
+            .map((customer) => customer.id)
+        }
+
+        return current.filter((id) => customersData.some((customer) => customer.id === id))
+      })
     } catch (error) {
       toast.error('No se pudieron cargar los clientes')
     } finally {
@@ -59,6 +69,36 @@ export default function CustomerCampaignsTab({ token, active }) {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
+  const toggleRecipient = (customerId) => {
+    setSelectedRecipients((current) => (
+      current.includes(customerId)
+        ? current.filter((id) => id !== customerId)
+        : [...current, customerId]
+    ))
+  }
+
+  const selectSuggestedTestRecipients = () => {
+    const suggested = customers
+      .filter((customer) => ['yordanka', 'william'].includes(customer.name?.trim().toLowerCase()))
+      .map((customer) => customer.id)
+
+    setSelectedRecipients(suggested)
+
+    if (suggested.length > 0) {
+      toast.success('Seleccionados Yordanka y William para la prueba')
+    } else {
+      toast.error('No encontre Yordanka y William en la tabla actual')
+    }
+  }
+
+  const selectAllVisibleRecipients = () => {
+    setSelectedRecipients(customers.map((customer) => customer.id))
+  }
+
+  const clearRecipients = () => {
+    setSelectedRecipients([])
+  }
+
   const customerStats = useMemo(() => ({
     total: customers.length,
     withEmail: customers.filter((customer) => customer.email).length,
@@ -73,6 +113,11 @@ export default function CustomerCampaignsTab({ token, active }) {
       return
     }
 
+    if (selectedRecipients.length === 0) {
+      toast.error('Selecciona al menos un cliente para la prueba')
+      return
+    }
+
     try {
       setSending(true)
 
@@ -82,7 +127,10 @@ export default function CustomerCampaignsTab({ token, active }) {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          recipient_ids: selectedRecipients,
+        }),
       })
 
       const data = await response.json().catch(() => ({}))
@@ -154,10 +202,26 @@ export default function CustomerCampaignsTab({ token, active }) {
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button type="button" variant="outline" onClick={selectSuggestedTestRecipients}>
+            Solo Yordanka y William
+          </Button>
+          <Button type="button" variant="outline" onClick={selectAllVisibleRecipients}>
+            Seleccionar visibles
+          </Button>
+          <Button type="button" variant="outline" onClick={clearRecipients}>
+            Limpiar seleccion
+          </Button>
+          <div className="flex items-center text-sm font-medium text-slate-600 px-2">
+            Seleccionados: {selectedRecipients.length}
+          </div>
+        </div>
+
         <div className="overflow-x-auto rounded-lg border border-slate-300">
           <table className="w-full border-collapse text-sm">
             <thead className="bg-slate-100">
               <tr>
+                <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Enviar</th>
                 <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Nombre</th>
                 <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Email</th>
                 <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Telefono</th>
@@ -166,13 +230,21 @@ export default function CustomerCampaignsTab({ token, active }) {
             <tbody>
               {customers.length === 0 ? (
                 <tr>
-                  <td colSpan="3" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
+                  <td colSpan="4" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
                     {loading ? 'Cargando clientes...' : 'No hay clientes registrados'}
                   </td>
                 </tr>
               ) : (
                 customers.map((customer, index) => (
                   <tr key={customer.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                    <td className="border border-slate-300 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedRecipients.includes(customer.id)}
+                        onChange={() => toggleRecipient(customer.id)}
+                        className="w-4 h-4 accent-primary-600"
+                      />
+                    </td>
                     <td className="border border-slate-300 px-3 py-2">{customer.name}</td>
                     <td className="border border-slate-300 px-3 py-2">{customer.email || '-'}</td>
                     <td className="border border-slate-300 px-3 py-2">{customer.phone || '-'}</td>
@@ -238,7 +310,10 @@ export default function CustomerCampaignsTab({ token, active }) {
 
           <div className="flex justify-end">
             <Button type="submit" loading={sending}>
-              {form.channel === 'email' ? 'Enviar emails' : 'Enviar SMS'}
+              {form.channel === 'email'
+                ? `Enviar emails a ${selectedRecipients.length}`
+                : `Enviar SMS a ${selectedRecipients.length}`
+              }
             </Button>
           </div>
         </form>
