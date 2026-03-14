@@ -357,7 +357,7 @@ export default function Inventory() {
   // ============================================
   const handleImport = async (dryRun = false) => {
     if (!importFile) {
-      toast.error('Selecciona un archivo CSV')
+      toast.error('Selecciona un archivo Excel o CSV')
       return
     }
 

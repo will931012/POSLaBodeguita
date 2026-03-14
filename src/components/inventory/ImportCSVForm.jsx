@@ -13,19 +13,22 @@ export default function ImportCSVForm({
   fileInputRef
 }) {
   return (
-    <Card title="Importar Productos (CSV)" icon={Upload}>
+    <Card title="Importar Productos (Excel o CSV)" icon={Upload}>
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Formato CSV: upc,name,price,qty,category
+            Formato: columnas `upc`, `name`, `price`, `qty`, `category`
           </label>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept=".xlsx,.xls,.csv"
             onChange={(e) => setImportFile(e.target.files[0])}
             className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
           />
+          <p className="mt-2 text-xs text-gray-500">
+            Recomendado: archivo Excel `.xlsx` con la primera hoja usando esos encabezados.
+          </p>
         </div>
 
         {importResult && (
