@@ -400,7 +400,7 @@ export default function Caja() {
       return
     }
 
-    if (paymentMethod === 'cash' && cashReceivedNum < subtotal) {
+    if (paymentMethod === 'cash' && cashReceivedNum < finalTotal) {
       toast.error('Efectivo insuficiente')
       return
     }
@@ -503,44 +503,63 @@ export default function Caja() {
         <meta charset="utf-8">
         <title>Recibo #${sale.id}</title>
         <style>
-          body { font-family: 'Courier New', monospace; max-width: 300px; margin: 0 auto; padding: 10px; }
+          body { font-family: 'Courier New', monospace; max-width: 270px; margin: 0 auto; padding: 8px; color: #111827; }
+          .receipt { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; }
           .center { text-align: center; }
-          .header { font-weight: bold; font-size: 16px; margin-bottom: 6px; }
-          .subheader { font-size: 12px; margin-bottom: 8px; }
-          .line { border-top: 1px dashed #000; margin: 10px 0; }
+          .header { font-weight: bold; font-size: 15px; margin-bottom: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+          .subheader { font-size: 11px; margin-bottom: 6px; }
+          .muted { color: #4b5563; font-size: 10px; }
+          .line { border-top: 1px dashed #000; margin: 8px 0; }
           table { width: 100%; border-collapse: collapse; }
-          td { padding: 4px 0; }
+          td { padding: 3px 0; vertical-align: top; }
           .right { text-align: right; }
+          .item-name { font-weight: bold; font-size: 12px; }
+          .item-meta { font-size: 10px; color: #4b5563; }
+          .summary td { font-size: 11px; }
           .total { font-weight: bold; font-size: 14px; }
-          .footer { margin-top: 12px; font-size: 11px; }
+          .footer { margin-top: 10px; font-size: 10px; line-height: 1.4; }
           .verse { font-style: italic; }
+          .thanks { font-weight: bold; font-size: 12px; margin-top: 2px; }
+          .print-btn { padding: 8px 14px; cursor: pointer; border: 1px solid #d1d5db; border-radius: 6px; background: white; margin-top: 14px; }
           @media print {
             @page { size: 80mm auto; margin: 0; }
             button { display: none; }
+            body { max-width: none; padding: 0; }
+            .receipt { border: none; border-radius: 0; padding: 6px 8px; }
           }
         </style>
       </head>
       <body>
+        <div class="receipt">
         <div class="center header">${locationName}</div>
         <div class="center subheader">Recibo #${sale.id}</div>
-        <div class="center">${new Date().toLocaleString('es-ES')}</div>
+        <div class="center muted">${new Date().toLocaleString('es-ES')}</div>
+        ${locationAddress ? `<div class="center muted" style="margin-top: 4px;">${locationAddress}</div>` : ''}
         <div class="line"></div>
         <table>
           ${items.map(item => `
             <tr>
               <td>
-                ${item.name}
-                <br><small>${item.qty} x $${item.price.toFixed(2)}</small>
+                <div class="item-name">${item.name}</div>
+                <div class="item-meta">${item.qty} x $${item.price.toFixed(2)}</div>
               </td>
-              <td class="right">$${(item.qty * item.price).toFixed(2)}</td>
+              <td class="right item-name">$${(item.qty * item.price).toFixed(2)}</td>
             </tr>
           `).join('')}
         </table>
         <div class="line"></div>
-        <table>
+        <table class="summary">
+          <tr>
+            <td>Subtotal</td>
+            <td class="right">$${subtotal.toFixed(2)}</td>
+          </tr>
           <tr class="total">
             <td>TOTAL</td>
             <td class="right">$${finalTotal.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td>Pago</td>
+            <td class="right">${paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'}</td>
           </tr>
           ${discountPercent > 0 ? `
             <tr>
@@ -550,7 +569,7 @@ export default function Caja() {
           ` : ''}
           ${paymentMethod === 'cash' ? `
             <tr>
-              <td>Efectivo</td>
+              <td>Recibido</td>
               <td class="right">$${cashReceivedNum.toFixed(2)}</td>
             </tr>
             <tr>
@@ -560,14 +579,14 @@ export default function Caja() {
           ` : ''}
         </table>
         <div class="line"></div>
-        <div class="center">¡Gracias por su compra!</div>
+        <div class="center thanks">Gracias por su compra</div>
         <div class="center footer">
-          ${locationAddress ? `<div>${locationAddress}</div>` : ''}
           ${verseText ? `<div class="verse">"${verseText}"</div>` : ''}
           ${verseRef ? `<div>${verseRef}</div>` : ''}
         </div>
-        <div class="center" style="margin-top: 20px;">
-          <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer;">Imprimir</button>
+        </div>
+        <div class="center">
+          <button onclick="window.print()" class="print-btn">Imprimir</button>
         </div>
       </body>
       </html>
