@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, ArrowRight, Store } from 'lucide-react'
-import Button from '@components/Button'
+import { ArrowRight, MapPin, Store } from 'lucide-react'
 import { toast } from 'sonner'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -21,11 +20,10 @@ export default function LocationSelector() {
       setLoading(true)
       const res = await fetch(`${API}/api/locations`)
       if (!res.ok) throw new Error('Failed to load locations')
-
       const data = await res.json()
       setLocations(Array.isArray(data) ? data : [])
     } catch (error) {
-      console.error('❌ Load locations error:', error)
+      console.error('Load locations error:', error)
       toast.error('Error al cargar ubicaciones')
       setLocations([])
     } finally {
@@ -40,36 +38,25 @@ export default function LocationSelector() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="spinner"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-50 flex items-center justify-center p-6">
-      <div className="max-w-6xl w-full">
-        
-        {/* HEADER */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-14"
-        >
-          <div className="flex items-center justify-center mb-4">
-            <Store className="w-14 h-14 text-primary-600" />
+    <div className="flex min-h-screen items-center justify-center bg-white p-6">
+      <div className="w-full max-w-6xl">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-14 text-center">
+          <div className="mb-4 flex items-center justify-center">
+            <Store className="h-14 w-14 text-accent-600" />
           </div>
-          <h1 className="text-5xl font-bold text-primary-700 mb-3">
-            Sistema POS
-          </h1>
-          <p className="text-xl text-gray-600">
-            Selecciona tu ubicación para continuar
-          </p>
+          <h1 className="mb-3 text-5xl font-bold text-primary-950">Sistema POS</h1>
+          <p className="text-xl text-primary-500">Selecciona tu ubicacion para continuar</p>
         </motion.div>
 
-        {/* LOCATIONS GRID */}
         {locations.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr">
+          <div className="grid auto-rows-fr grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {locations.map((location, index) => (
               <motion.div
                 key={location.id}
@@ -82,53 +69,21 @@ export default function LocationSelector() {
               >
                 <button
                   onClick={() => selectLocation(location)}
-                  className="
-                    w-full h-full min-h-[300px]
-                    bg-white rounded-2xl shadow-xl
-                    hover:shadow-2xl transition-all
-                    p-8 border-2 border-transparent
-                    hover:border-primary-500
-                    flex flex-col items-center text-center
-                    group
-                  "
+                  className="group flex h-full min-h-[300px] w-full flex-col items-center rounded-2xl border-2 border-primary-100 bg-white p-8 text-center shadow-xl transition-all hover:border-accent-600 hover:shadow-2xl"
                 >
-                  {/* ICON */}
-                  <div className="
-                    w-16 h-16 mb-6
-                    bg-gradient-to-br from-primary-600 to-primary-700
-                    rounded-2xl flex items-center justify-center
-                    group-hover:scale-110 transition-transform
-                  ">
-                    <MapPin className="w-8 h-8 text-white" />
+                  <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-950 transition-transform group-hover:scale-110">
+                    <MapPin className="h-8 w-8 text-white" />
                   </div>
 
-                  {/* CONTENT */}
-                  <div className="flex-1 flex flex-col justify-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
-                      {location.name}
-                    </h2>
-
-                    {location.address && (
-                      <p className="text-gray-600 mb-2 line-clamp-2">
-                        {location.address}
-                      </p>
-                    )}
-
-                    {location.phone && (
-                      <p className="text-sm text-gray-500">
-                        📞 {location.phone}
-                      </p>
-                    )}
+                  <div className="flex flex-1 flex-col justify-center">
+                    <h2 className="mb-2 line-clamp-2 text-2xl font-bold text-primary-950">{location.name}</h2>
+                    {location.address && <p className="mb-2 line-clamp-2 text-primary-500">{location.address}</p>}
+                    {location.phone && <p className="text-sm text-primary-400">{location.phone}</p>}
                   </div>
 
-                  {/* ACTION */}
-                  <div className="
-                    mt-6 flex items-center gap-2
-                    text-primary-600 font-semibold
-                    group-hover:gap-4 transition-all
-                  ">
+                  <div className="mt-6 flex items-center gap-2 font-semibold text-accent-600 transition-all group-hover:gap-4">
                     <span>Continuar</span>
-                    <ArrowRight className="w-5 h-5" />
+                    <ArrowRight className="h-5 w-5" />
                   </div>
                 </button>
               </motion.div>
@@ -136,33 +91,17 @@ export default function LocationSelector() {
           </div>
         )}
 
-        {/* EMPTY STATE */}
         {locations.length === 0 && !loading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16"
-          >
-            <Store className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600 text-lg mb-2">
-              No hay ubicaciones disponibles
-            </p>
-            <button
-              onClick={loadLocations}
-              className="text-primary-600 hover:text-primary-700 font-semibold"
-            >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-16 text-center">
+            <Store className="mx-auto mb-4 h-16 w-16 text-primary-300" />
+            <p className="mb-2 text-lg text-primary-500">No hay ubicaciones disponibles</p>
+            <button onClick={loadLocations} className="font-semibold text-accent-600 hover:text-accent-700">
               Reintentar
             </button>
           </motion.div>
         )}
 
-        {/* FOOTER */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-center mt-16 text-gray-500 text-sm"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="mt-16 text-center text-sm text-primary-400">
           <p>© 2026 POS Multi-Store System</p>
         </motion.div>
       </div>

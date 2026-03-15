@@ -653,8 +653,8 @@ export default function Caja() {
             <h1 className="text-4xl font-bold text-gradient">Caja</h1>
             {itemCount > 0 && (
               <div className="flex items-center gap-2 mt-2">
-                <Save className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-green-600 font-semibold">
+                <Save className="w-4 h-4 text-accent-600" />
+                <span className="text-sm text-accent-600 font-semibold">
                   Venta guardada automáticamente ({itemCount} productos)
                 </span>
               </div>

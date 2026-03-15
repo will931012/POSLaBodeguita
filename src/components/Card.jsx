@@ -17,7 +17,7 @@ export default function Card({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={clsx(
-        'bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden',
+        'bg-white rounded-2xl shadow-lg border border-primary-100 overflow-hidden',
         hover && 'card-hover',
         className
       )}
@@ -25,7 +25,7 @@ export default function Card({
     >
       {(title || Icon) && (
         <div className={clsx(
-          'px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white',
+          'px-6 py-4 border-b border-primary-100 bg-gradient-to-r from-[#F4F4F4] to-white',
           headerClassName
         )}>
           <div className="flex items-center gap-3">
@@ -36,10 +36,10 @@ export default function Card({
             )}
             <div className="flex-1">
               {title && (
-                <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+                <h3 className="text-lg font-bold text-primary-950">{title}</h3>
               )}
               {subtitle && (
-                <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+                <p className="text-sm text-primary-400 mt-0.5">{subtitle}</p>
               )}
             </div>
           </div>
@@ -88,14 +88,14 @@ export function StatCard({
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ y: -4, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}
       className={clsx(
-        'bg-white rounded-2xl shadow-lg border border-gray-100 p-6',
+        'bg-white rounded-2xl shadow-lg border border-primary-100 p-6',
         'transition-all duration-300',
         className
       )}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          <p className="text-sm font-semibold text-primary-400 uppercase tracking-wider mb-2">
             {title}
           </p>
           <p className={clsx('text-4xl font-bold font-mono', colors.text)}>
@@ -105,7 +105,7 @@ export function StatCard({
             <div className="flex items-center gap-1 mt-2">
               <span className={clsx(
                 'text-sm font-semibold',
-                trendUp ? 'text-success-600' : 'text-red-600'
+                trendUp ? 'text-accent-600' : 'text-primary-600'
               )}>
                 {trendUp ? '↑' : '↓'} {trend}
               </span>

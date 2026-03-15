@@ -19,7 +19,7 @@ export default function CategoriesSection({ categoryData }) {
         { key: 'category', label: 'Categoria' },
         { key: 'totalSales', label: 'Ventas', cellClassName: 'font-mono' },
         { key: 'totalUnits', label: 'Unidades', cellClassName: 'font-mono' },
-        { key: 'totalRevenue', label: 'Ingresos', cellClassName: 'font-mono' },
+        { key: 'totalRevenue', label: 'Ingresos', cellClassName: 'font-mono text-accent-600 font-semibold' },
       ]}
       rows={rows}
       emptyMessage="No hay datos de categorias"

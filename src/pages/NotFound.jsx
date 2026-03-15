@@ -17,11 +17,11 @@ export default function NotFound() {
           404
         </div>
         
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="text-3xl font-bold text-primary-950">
           Página no encontrada
         </h1>
         
-        <p className="text-gray-600 max-w-md mx-auto">
+        <p className="mx-auto max-w-md text-primary-500">
           Lo sentimos, la página que buscas no existe o ha sido movida.
         </p>
         

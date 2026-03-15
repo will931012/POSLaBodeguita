@@ -12,14 +12,14 @@ const Input = forwardRef(({
   return (
     <div className={clsx('w-full', containerClassName)}>
       {label && (
-        <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
+        <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary-600">
           {label}
         </label>
       )}
       
       <div className="relative">
         {Icon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-300">
             <Icon className="w-5 h-5" />
           </div>
         )}
@@ -32,9 +32,9 @@ const Input = forwardRef(({
             'focus:outline-none input-focus',
             Icon && 'pl-11',
             error 
-              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-              : 'border-gray-200 focus:border-primary-600',
-            'disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60',
+              ? 'border-accent-600 focus:border-accent-600 focus:ring-accent-600/20'
+              : 'border-primary-200 bg-[#F4F4F4] text-primary-600 focus:border-accent-600',
+            'disabled:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60',
             className
           )}
           {...props}
@@ -42,7 +42,7 @@ const Input = forwardRef(({
       </div>
       
       {error && (
-        <p className="mt-2 text-sm text-red-600 font-medium">
+        <p className="mt-2 text-sm font-medium text-accent-600">
           {error}
         </p>
       )}

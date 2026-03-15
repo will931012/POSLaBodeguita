@@ -1,13 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import {
-  TrendingUp,
-  DollarSign,
-  ShoppingBag,
-  Sparkles,
-  Calendar,
-  Crown,
-} from 'lucide-react'
+import { TrendingUp, DollarSign, ShoppingBag, Sparkles, Calendar, Crown } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 import { Navigate } from 'react-router-dom'
@@ -28,20 +21,11 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 export default function AdminDashboard() {
   const { token, user } = useAuth()
-
-  if (user?.role !== 'admin') {
-    return <Navigate to="/" replace />
-  }
+  if (user?.role !== 'admin') return <Navigate to="/" replace />
 
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('30')
-  const [summary, setSummary] = useState({
-    totalSales: 0,
-    totalRevenue: 0,
-    perfumeSales: 0,
-    perfumeRevenue: 0,
-    totalCategories: 0
-  })
+  const [summary, setSummary] = useState({ totalSales: 0, totalRevenue: 0, perfumeSales: 0, perfumeRevenue: 0, totalCategories: 0 })
   const [categoryData, setCategoryData] = useState([])
   const [perfumeProducts, setPerfumeProducts] = useState([])
   const [topProducts, setTopProducts] = useState([])
@@ -50,12 +34,7 @@ export default function AdminDashboard() {
   const [announcementTitle, setAnnouncementTitle] = useState('')
   const [announcementMessage, setAnnouncementMessage] = useState('')
   const [announcementSending, setAnnouncementSending] = useState(false)
-  const [todaySales, setTodaySales] = useState({
-    count: 0,
-    revenue: 0,
-    perfumeCount: 0,
-    perfumeRevenue: 0
-  })
+  const [todaySales, setTodaySales] = useState({ count: 0, revenue: 0, perfumeCount: 0, perfumeRevenue: 0 })
 
   const isAbortError = (error) => error?.name === 'AbortError'
 
@@ -64,10 +43,7 @@ export default function AdminDashboard() {
     const end = new Date()
     const start = new Date()
     start.setDate(start.getDate() - parsedDays)
-    return {
-      startDate: start.toISOString(),
-      endDate: end.toISOString()
-    }
+    return { startDate: start.toISOString(), endDate: end.toISOString() }
   }
 
   const loadDashboard = async (signal) => {
@@ -77,26 +53,11 @@ export default function AdminDashboard() {
       const params = new URLSearchParams({ startDate, endDate })
 
       const [summaryRes, categoryRes, perfumeRes, topRes, locationRes] = await Promise.all([
-        fetch(`${API}/api/analytics/dashboard-summary?${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        }),
-        fetch(`${API}/api/analytics/sales-by-category?${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        }),
-        fetch(`${API}/api/analytics/perfume-sales?${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        }),
-        fetch(`${API}/api/analytics/top-products?limit=5&${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        }),
-        fetch(`${API}/api/analytics/location-breakdown?${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        })
+        fetch(`${API}/api/analytics/dashboard-summary?${params}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+        fetch(`${API}/api/analytics/sales-by-category?${params}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+        fetch(`${API}/api/analytics/perfume-sales?${params}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+        fetch(`${API}/api/analytics/top-products?limit=5&${params}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+        fetch(`${API}/api/analytics/location-breakdown?${params}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
       ])
 
       if (!summaryRes.ok) {
@@ -105,22 +66,17 @@ export default function AdminDashboard() {
       }
 
       const summaryData = await summaryRes.json()
-      const categoryList = categoryRes.ok ? await categoryRes.json() : []
-      const perfumeList = perfumeRes.ok ? await perfumeRes.json() : []
-      const topList = topRes.ok ? await topRes.json() : []
-      const locationList = locationRes.ok ? await locationRes.json() : []
-
       setSummary({
         totalSales: summaryData.totalSales || 0,
         totalRevenue: summaryData.totalRevenue || 0,
         perfumeSales: summaryData.perfumeSales || 0,
         perfumeRevenue: summaryData.perfumeRevenue || 0,
-        totalCategories: summaryData.totalCategories || 0
+        totalCategories: summaryData.totalCategories || 0,
       })
-      setCategoryData(categoryList)
-      setPerfumeProducts(perfumeList)
-      setTopProducts(topList)
-      setLocationBreakdown(locationList)
+      setCategoryData(categoryRes.ok ? await categoryRes.json() : [])
+      setPerfumeProducts(perfumeRes.ok ? await perfumeRes.json() : [])
+      setTopProducts(topRes.ok ? await topRes.json() : [])
+      setLocationBreakdown(locationRes.ok ? await locationRes.json() : [])
     } catch (error) {
       if (isAbortError(error)) return
       console.error('Dashboard load error:', error)
@@ -133,14 +89,8 @@ export default function AdminDashboard() {
   const loadAllPerfumes = async (signal) => {
     try {
       const [perfumeRes, fraganciaRes] = await Promise.all([
-        fetch(`${API}/api/products?q=perfume&limit=1000`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        }),
-        fetch(`${API}/api/products?q=fragancia&limit=1000`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        })
+        fetch(`${API}/api/products?q=perfume&limit=1000`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+        fetch(`${API}/api/products?q=fragancia&limit=1000`, { headers: { Authorization: `Bearer ${token}` }, signal }),
       ])
 
       const datasets = []
@@ -151,10 +101,7 @@ export default function AdminDashboard() {
         const combined = datasets.flatMap((dataset) => dataset.rows || [])
         const byId = new Map(combined.map((product) => [product.id, product]))
         const perfumes = Array.from(byId.values()).filter((product) =>
-          product.category && (
-            product.category.toLowerCase().includes('perfume')
-            || product.category.toLowerCase().includes('fragancia')
-          )
+          product.category && (product.category.toLowerCase().includes('perfume') || product.category.toLowerCase().includes('fragancia'))
         )
         setAllPerfumes(perfumes)
       }
@@ -170,35 +117,23 @@ export default function AdminDashboard() {
       today.setHours(0, 0, 0, 0)
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
-
-      const params = new URLSearchParams({
-        startDate: today.toISOString(),
-        endDate: tomorrow.toISOString()
-      })
+      const params = new URLSearchParams({ startDate: today.toISOString(), endDate: tomorrow.toISOString() })
 
       const [summaryRes, perfumeRes] = await Promise.all([
-        fetch(`${API}/api/analytics/dashboard-summary?${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        }),
-        fetch(`${API}/api/analytics/perfume-sales?${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        })
+        fetch(`${API}/api/analytics/dashboard-summary?${params}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+        fetch(`${API}/api/analytics/perfume-sales?${params}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
       ])
 
       if (summaryRes.ok) {
         const summaryData = await summaryRes.json()
         const perfumeData = perfumeRes.ok ? await perfumeRes.json() : []
-
         const perfumeRevenue = perfumeData.reduce((sum, product) => sum + (parseFloat(product.revenue) || 0), 0)
         const perfumeUnits = perfumeData.reduce((sum, product) => sum + (parseFloat(product.units_sold) || 0), 0)
-
         setTodaySales({
           count: summaryData.totalSales || 0,
           revenue: summaryData.totalRevenue || 0,
           perfumeCount: perfumeUnits || 0,
-          perfumeRevenue
+          perfumeRevenue,
         })
       }
     } catch (error) {
@@ -229,15 +164,11 @@ export default function AdminDashboard() {
   }, [token])
 
   const perfumePercentage = useMemo(() => (
-    summary.totalRevenue > 0
-      ? (summary.perfumeRevenue / summary.totalRevenue * 100).toFixed(1)
-      : 0
+    summary.totalRevenue > 0 ? (summary.perfumeRevenue / summary.totalRevenue * 100).toFixed(1) : 0
   ), [summary.perfumeRevenue, summary.totalRevenue])
 
   const averageTicket = useMemo(() => (
-    summary.totalSales > 0
-      ? (summary.totalRevenue / summary.totalSales).toFixed(2)
-      : '0.00'
+    summary.totalSales > 0 ? (summary.totalRevenue / summary.totalSales).toFixed(2) : '0.00'
   ), [summary.totalRevenue, summary.totalSales])
 
   const topCategory = useMemo(() => {
@@ -247,23 +178,14 @@ export default function AdminDashboard() {
 
   const handleAnnouncementSubmit = async (event) => {
     event.preventDefault()
-    if (!announcementMessage.trim()) {
-      toast.error('Escribe un mensaje para enviar')
-      return
-    }
+    if (!announcementMessage.trim()) return toast.error('Escribe un mensaje para enviar')
 
     setAnnouncementSending(true)
     try {
       const res = await fetch(`${API}/api/announcements`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: announcementTitle.trim(),
-          message: announcementMessage.trim(),
-        }),
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: announcementTitle.trim(), message: announcementMessage.trim() }),
       })
 
       if (!res.ok) {
@@ -282,33 +204,19 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-amber-50 to-white py-8 px-4">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Crown className="w-10 h-10 text-amber-600" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-amber-600 bg-clip-text text-transparent">
-              Admin Dashboard
-            </h1>
+    <div className="min-h-screen bg-white py-8 px-4">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <Crown className="h-10 w-10 text-accent-600" />
+            <h1 className="text-5xl font-bold text-primary-950">Admin Dashboard</h1>
           </div>
-          <p className="text-lg text-slate-600">
-            Analitica visual de ventas, categorias y sucursales
-          </p>
-          <p className="text-sm font-medium text-blue-700">
-            Vista consolidada de las 3 ubicaciones
-          </p>
+          <p className="text-lg text-primary-600">Analitica visual de ventas, categorias y sucursales</p>
+          <p className="text-sm font-medium text-accent-600">Vista consolidada de las 3 ubicaciones</p>
 
           <div className="mt-6 flex items-center justify-center gap-3">
-            <Calendar className="w-5 h-5 text-slate-500" />
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="px-4 py-2 rounded-xl border-2 border-slate-200 bg-white font-semibold text-slate-700 focus:outline-none focus:border-blue-500 transition-colors"
-            >
+            <Calendar className="h-5 w-5 text-primary-400" />
+            <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="rounded-xl border-2 border-primary-200 bg-[#F4F4F4] px-4 py-2 font-semibold text-primary-600 transition-colors focus:border-accent-600 focus:outline-none">
               <option value="1">Ultimo dia</option>
               <option value="7">Ultimos 7 dias</option>
               <option value="30">Ultimos 30 dias</option>
@@ -319,123 +227,68 @@ export default function AdminDashboard() {
         </motion.div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="spinner"></div>
-          </div>
+          <div className="flex items-center justify-center py-20"><div className="spinner"></div></div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                icon={ShoppingBag}
-                label="Total Ventas"
-                value={summary.totalSales || 0}
-                color="purple"
-                delay={0}
-              />
-              <StatCard
-                icon={DollarSign}
-                label="Ingresos Totales"
-                value={`$${(summary.totalRevenue || 0).toFixed(2)}`}
-                color="green"
-                delay={0.1}
-              />
-              <StatCard
-                icon={Sparkles}
-                label="Ventas de Perfumes"
-                value={summary.perfumeSales || 0}
-                color="pink"
-                delay={0.2}
-                badge={`${perfumePercentage}%`}
-              />
-              <StatCard
-                icon={TrendingUp}
-                label="Ticket Promedio"
-                value={`$${averageTicket}`}
-                color="blue"
-                delay={0.3}
-              />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard icon={ShoppingBag} label="Total Ventas" value={summary.totalSales || 0} color="purple" delay={0} />
+              <StatCard icon={DollarSign} label="Ingresos Totales" value={`$${(summary.totalRevenue || 0).toFixed(2)}`} color="green" delay={0.1} />
+              <StatCard icon={Sparkles} label="Ventas de Perfumes" value={summary.perfumeSales || 0} color="pink" delay={0.2} badge={`${perfumePercentage}%`} />
+              <StatCard icon={TrendingUp} label="Ticket Promedio" value={`$${averageTicket}`} color="blue" delay={0.3} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Categoria lider</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{topCategory}</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-primary-100 bg-white p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary-400">Categoria lider</p>
+                <p className="mt-2 text-2xl font-bold text-primary-950">{topCategory}</p>
               </div>
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Categorias activas</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{summary.totalCategories || 0}</p>
+              <div className="rounded-2xl border border-primary-100 bg-white p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary-400">Categorias activas</p>
+                <p className="mt-2 text-2xl font-bold text-primary-950">{summary.totalCategories || 0}</p>
               </div>
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Perfumes hoy</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{todaySales.perfumeCount || 0}</p>
+              <div className="rounded-2xl border border-primary-100 bg-white p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary-400">Perfumes hoy</p>
+                <p className="mt-2 text-2xl font-bold text-primary-950">{todaySales.perfumeCount || 0}</p>
               </div>
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Ingresos hoy</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">${(todaySales.revenue || 0).toFixed(2)}</p>
+              <div className="rounded-2xl border border-primary-100 bg-white p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary-400">Ingresos hoy</p>
+                <p className="mt-2 text-2xl font-bold text-accent-600">${(todaySales.revenue || 0).toFixed(2)}</p>
               </div>
             </div>
 
-            <SalesInsightsPies
-              categoryData={categoryData}
-              locationBreakdown={locationBreakdown}
-              summary={summary}
-            />
+            <SalesInsightsPies categoryData={categoryData} locationBreakdown={locationBreakdown} summary={summary} />
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <TodaySales todaySales={todaySales} />
-              <MetricsTable
-                summary={summary}
-                todaySales={todaySales}
-                perfumePercentage={perfumePercentage}
-              />
+              <MetricsTable summary={summary} todaySales={todaySales} perfumePercentage={perfumePercentage} />
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <CategoriesSection categoryData={categoryData} />
               <LocationBreakdownTable locations={locationBreakdown} />
             </div>
 
             <TopProductsTable topProducts={topProducts} />
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
               <PerfumeSalesSection perfumeProducts={perfumeProducts} />
               <PerfumesInventory allPerfumes={allPerfumes} />
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-              <div className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200 p-6 shadow-sm">
-                <h2 className="text-xl font-bold text-slate-900">Mensaje global</h2>
-                <p className="text-sm text-slate-600 mt-1">
-                  Envia un aviso que se mostrara una sola vez a todos los usuarios.
-                </p>
+            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+              <div className="rounded-2xl border border-primary-100 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-primary-950">Mensaje global</h2>
+                <p className="mt-1 text-sm text-primary-500">Envia un aviso que se mostrara una sola vez a todos los usuarios.</p>
                 <form onSubmit={handleAnnouncementSubmit} className="mt-4 space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Titulo (opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={announcementTitle}
-                      onChange={(e) => setAnnouncementTitle(e.target.value)}
-                      placeholder="Aviso importante"
-                      className="w-full px-4 py-2 rounded-xl border-2 border-slate-200 bg-white text-slate-700 focus:outline-none focus:border-blue-500 transition-colors"
-                    />
+                    <label className="mb-2 block text-sm font-semibold text-primary-600">Titulo (opcional)</label>
+                    <input type="text" value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} placeholder="Aviso importante" className="w-full rounded-xl border-2 border-primary-200 bg-[#F4F4F4] px-4 py-2 text-primary-600 transition-colors focus:border-accent-600 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Mensaje
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={announcementMessage}
-                      onChange={(e) => setAnnouncementMessage(e.target.value)}
-                      placeholder="Se ha cambiado el precio de..."
-                      className="w-full px-4 py-2 rounded-xl border-2 border-slate-200 bg-white text-slate-700 focus:outline-none focus:border-blue-500 transition-colors"
-                    />
+                    <label className="mb-2 block text-sm font-semibold text-primary-600">Mensaje</label>
+                    <textarea rows={4} value={announcementMessage} onChange={(e) => setAnnouncementMessage(e.target.value)} placeholder="Se ha cambiado el precio de..." className="w-full rounded-xl border-2 border-primary-200 bg-[#F4F4F4] px-4 py-2 text-primary-600 transition-colors focus:border-accent-600 focus:outline-none" />
                   </div>
-                  <Button type="submit" loading={announcementSending}>
-                    Enviar a todos
-                  </Button>
+                  <Button type="submit" loading={announcementSending}>Enviar a todos</Button>
                 </form>
               </div>
 

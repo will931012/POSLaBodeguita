@@ -24,7 +24,7 @@ export default function PerfumeSalesSection({ perfumeProducts }) {
           { key: 'name', label: 'Producto' },
           { key: 'category', label: 'Categoria' },
           { key: 'unitsSold', label: 'Vendidas', cellClassName: 'font-mono' },
-          { key: 'revenue', label: 'Ingresos', cellClassName: 'font-mono' },
+          { key: 'revenue', label: 'Ingresos', cellClassName: 'font-mono text-accent-600 font-semibold' },
           { key: 'avgPrice', label: 'Promedio', cellClassName: 'font-mono' },
           { key: 'stock', label: 'Stock', cellClassName: 'font-mono' },
         ]}

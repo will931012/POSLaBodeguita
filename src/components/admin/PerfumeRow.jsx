@@ -5,32 +5,31 @@ export default function PerfumeRow({ product, rank, maxRevenue }) {
   const percentage = Math.min((revenue / maxRevenue) * 100, 100)
 
   return (
-    <div className="p-4 rounded-xl bg-white border border-purple-100 hover:border-purple-300 transition-all">
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-xl border border-primary-100 bg-white p-4 transition-all hover:border-accent-200">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
-            rank <= 3 ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white' : 'bg-gray-100 text-gray-700'
+          <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+            rank <= 3 ? 'bg-accent-600 text-white' : 'bg-[#F4F4F4] text-primary-600'
           }`}>
             {rank}
           </span>
           <div>
-            <p className="font-semibold text-gray-900">{product.name}</p>
-            <p className="text-xs text-gray-500">Stock: {product.current_stock || 0}</p>
+            <p className="font-semibold text-primary-950">{product.name}</p>
+            <p className="text-xs text-primary-400">Stock: {product.current_stock || 0}</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="font-bold text-lg text-purple-600">${revenue.toFixed(2)}</p>
-          <p className="text-xs text-gray-500">{product.units_sold || 0} vendidas</p>
+          <p className="text-lg font-bold text-accent-600">${revenue.toFixed(2)}</p>
+          <p className="text-xs text-primary-400">{product.units_sold || 0} vendidas</p>
         </div>
       </div>
-      
-      {/* Revenue bar */}
-      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+
+      <div className="h-2 w-full overflow-hidden rounded-full bg-primary-100">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 1, delay: rank * 0.1 }}
-          className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+          className="h-full bg-gradient-to-r from-primary-950 to-accent-600"
         />
       </div>
     </div>

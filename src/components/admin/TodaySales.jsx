@@ -3,26 +3,10 @@ import ExcelTableCard from './ExcelTableCard.jsx'
 
 export default function TodaySales({ todaySales }) {
   const rows = [
-    {
-      key: 'today-total-sales',
-      metric: 'Total Ventas',
-      value: todaySales.count || 0,
-    },
-    {
-      key: 'today-revenue',
-      metric: 'Ingresos',
-      value: `$${(todaySales.revenue || 0).toFixed(2)}`,
-    },
-    {
-      key: 'today-perfumes',
-      metric: 'Perfumes',
-      value: todaySales.perfumeCount || 0,
-    },
-    {
-      key: 'today-perfume-revenue',
-      metric: 'Rev. Perfumes',
-      value: `$${(todaySales.perfumeRevenue || 0).toFixed(2)}`,
-    },
+    { key: 'today-total-sales', metric: 'Total Ventas', value: todaySales.count || 0 },
+    { key: 'today-revenue', metric: 'Ingresos', value: `$${(todaySales.revenue || 0).toFixed(2)}` },
+    { key: 'today-perfumes', metric: 'Perfumes', value: todaySales.perfumeCount || 0 },
+    { key: 'today-perfume-revenue', metric: 'Rev. Perfumes', value: `$${(todaySales.perfumeRevenue || 0).toFixed(2)}` },
   ]
 
   return (
@@ -32,7 +16,7 @@ export default function TodaySales({ todaySales }) {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       })}
       icon={Calendar}
       headers={[
