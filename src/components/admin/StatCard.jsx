@@ -3,11 +3,11 @@ import Card from '@components/Card'
 
 export default function StatCard({ icon: Icon, label, value, color, delay, badge }) {
   const colors = {
-    purple: 'from-primary-900 to-primary-950',
-    green: 'from-primary-700 to-primary-900',
-    pink: 'from-accent-500 to-accent-700',
-    amber: 'from-primary-800 to-accent-600',
-    blue: 'from-primary-600 to-primary-900',
+    purple: 'from-purple-500 to-purple-600',
+    green: 'from-green-500 to-green-600',
+    pink: 'from-pink-500 to-pink-600',
+    amber: 'from-amber-500 to-amber-600',
+    blue: 'from-blue-500 to-blue-600',
   }
 
   return (
@@ -25,14 +25,14 @@ export default function StatCard({ icon: Icon, label, value, color, delay, badge
               <Icon className="w-6 h-6 text-white" />
             </div>
             {badge && (
-              <span className="px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-sm font-bold">
+              <span className="px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-bold">
                 {badge}
               </span>
             )}
           </div>
           
-          <p className="text-sm font-semibold text-primary-500 uppercase tracking-wide mb-1">{label}</p>
-          <p className="text-3xl font-bold text-primary-950">{value}</p>
+          <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">{label}</p>
+          <p className="text-3xl font-bold text-gray-900">{value}</p>
         </div>
       </Card>
     </motion.div>

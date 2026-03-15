@@ -3,11 +3,11 @@ import { clsx } from 'clsx'
 import { Loader2 } from 'lucide-react'
 
 const variants = {
-  primary: 'bg-primary-950 text-white shadow-lg shadow-black/20 hover:bg-primary-800 hover:shadow-xl hover:shadow-black/25',
-  secondary: 'bg-accent-600 text-white shadow-lg shadow-accent-600/30 hover:bg-accent-700 hover:shadow-xl hover:shadow-accent-700/30',
-  danger: 'bg-accent-600 text-white shadow-lg shadow-accent-600/30 hover:bg-accent-700 hover:shadow-xl hover:shadow-accent-700/30',
-  outline: 'border-2 border-primary-200 text-primary-600 hover:border-accent-600 hover:bg-accent-50 hover:text-accent-700',
-  ghost: 'text-primary-600 hover:bg-primary-50',
+  primary: 'gradient-primary text-white shadow-lg shadow-primary-500/50 hover:shadow-xl hover:shadow-primary-600/50',
+  secondary: 'gradient-success text-white shadow-lg shadow-success-500/50 hover:shadow-xl hover:shadow-success-600/50',
+  danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/50 hover:shadow-xl hover:shadow-red-600/50',
+  outline: 'border-2 border-gray-300 text-gray-700 hover:border-primary-600 hover:bg-primary-50 hover:text-primary-700',
+  ghost: 'text-gray-700 hover:bg-gray-100',
 }
 
 const sizes = {

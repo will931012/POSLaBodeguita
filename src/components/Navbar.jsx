@@ -45,7 +45,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-primary-950 shadow-xl">
+    <nav className="sticky top-0 z-50 bg-gradient-to-r from-primary-700 to-primary-600 shadow-xl">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
 
@@ -56,7 +56,7 @@ export default function Navbar() {
               transition={{ duration: 0.5 }}
               className="w-10 h-10 bg-white rounded-xl flex items-center justify-center"
             >
-              <ShoppingCart className="w-6 h-6 text-accent-600" />
+              <ShoppingCart className="w-6 h-6 text-primary-600" />
             </motion.div>
             <span className="text-white font-bold text-xl hidden sm:block">
               POS System
@@ -104,7 +104,7 @@ export default function Navbar() {
                   {isActive && (
                     <motion.div
                       layoutId="navbar-indicator"
-                      className="absolute bottom-0 left-0 right-0 h-1 bg-accent-600 rounded-full"
+                      className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-full"
                     />
                   )}
                 </Link>
@@ -113,9 +113,9 @@ export default function Navbar() {
 
             <button
               onClick={handleLogout}
-              className="ml-2 px-4 py-2 rounded-xl bg-accent-600/15 hover:bg-accent-600/25 transition-colors"
+              className="ml-2 px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 transition-colors"
             >
-              <LogOut className="w-5 h-5 text-accent-100" />
+              <LogOut className="w-5 h-5 text-red-200" />
             </button>
           </div>
 
@@ -165,7 +165,7 @@ export default function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                     isActive
-                      ? 'bg-white text-accent-600'
+                      ? 'bg-white text-primary-600'
                       : 'text-white/80 hover:bg-white/10'
                   }`}
                 >
@@ -177,7 +177,7 @@ export default function Navbar() {
 
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-accent-600/15 text-accent-100 hover:bg-accent-600/25 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/20 text-red-200 hover:bg-red-500/30 transition-colors"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Cerrar Sesión</span>

@@ -2,12 +2,21 @@ import { Upload } from 'lucide-react'
 import Card from '@components/Card'
 import Button from '@components/Button'
 
-export default function ImportCSVForm({ importFile, setImportFile, importResult, importing, onPreview, onImport, onCancel, fileInputRef }) {
+export default function ImportCSVForm({
+  importFile,
+  setImportFile,
+  importResult,
+  importing,
+  onPreview,
+  onImport,
+  onCancel,
+  fileInputRef
+}) {
   return (
     <Card title="Importar Productos (Excel o CSV)" icon={Upload}>
       <div className="space-y-4">
         <div>
-          <label className="mb-2 block text-sm font-semibold text-primary-600">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
             Formato: columnas `upc`, `name`, `price`, `qty`, `category`
           </label>
           <input
@@ -15,22 +24,22 @@ export default function ImportCSVForm({ importFile, setImportFile, importResult,
             type="file"
             accept=".xlsx,.xls,.csv"
             onChange={(e) => setImportFile(e.target.files[0])}
-            className="block w-full text-sm text-primary-500 file:mr-4 file:rounded-lg file:border-0 file:bg-[#F4F4F4] file:px-4 file:py-2 file:text-primary-700 hover:file:bg-primary-100"
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
           />
-          <p className="mt-2 text-xs text-primary-400">
+          <p className="mt-2 text-xs text-gray-500">
             Recomendado: archivo Excel `.xlsx` con la primera hoja usando esos encabezados.
           </p>
         </div>
 
         {importResult && (
-          <div className="rounded-xl border border-primary-100 bg-[#F4F4F4] p-4">
-            <h3 className="mb-2 font-semibold text-primary-950">Resultado de importacion</h3>
-            <p className="text-primary-600">Importados: {importResult.imported}</p>
-            <p className="text-primary-600">Errores: {importResult.errors}</p>
+          <div className="bg-gray-50 rounded-xl p-4">
+            <h3 className="font-semibold mb-2">Resultado de Importación</h3>
+            <p>Importados: {importResult.imported}</p>
+            <p>Errores: {importResult.errors}</p>
             {importResult.preview && (
               <div className="mt-2">
-                <p className="text-sm font-semibold text-primary-600">Vista previa:</p>
-                <pre className="mt-1 overflow-x-auto rounded border border-primary-100 bg-white p-2 text-xs text-primary-600">
+                <p className="text-sm font-semibold">Vista Previa:</p>
+                <pre className="text-xs bg-white p-2 rounded mt-1 overflow-x-auto">
                   {JSON.stringify(importResult.preview, null, 2)}
                 </pre>
               </div>
@@ -39,9 +48,28 @@ export default function ImportCSVForm({ importFile, setImportFile, importResult,
         )}
 
         <div className="flex gap-2">
-          <Button onClick={onPreview} loading={importing} disabled={!importFile} variant="outline">Vista previa</Button>
-          <Button onClick={onImport} loading={importing} disabled={!importFile} icon={Upload}>Importar</Button>
-          <Button variant="outline" onClick={onCancel}>Cancelar</Button>
+          <Button
+            onClick={onPreview}
+            loading={importing}
+            disabled={!importFile}
+            variant="outline"
+          >
+            Vista Previa
+          </Button>
+          <Button
+            onClick={onImport}
+            loading={importing}
+            disabled={!importFile}
+            icon={Upload}
+          >
+            Importar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+          >
+            Cancelar
+          </Button>
         </div>
       </div>
     </Card>

@@ -28,7 +28,7 @@ function PageLoader() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="spinner mx-auto mb-4"></div>
-        <p className="text-primary-500">Cargando...</p>
+        <p className="text-gray-600">Cargando...</p>
       </div>
     </div>
   )

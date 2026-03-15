@@ -4,28 +4,38 @@ import { useAuth } from '@/context/AuthContext'
 export default function ProtectedRoute({ children, roles = [] }) {
   const { user, loading, isAuthenticated, hasRole } = useAuth()
 
+  // Loading state
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="spinner"></div>
       </div>
     )
   }
 
+  // Not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/" replace />
   }
 
+  // Role-based access
   if (roles.length > 0 && !hasRole(roles)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white p-4">
-        <div className="max-w-md text-center">
-          <div className="mb-4 text-6xl">🔒</div>
-          <h1 className="mb-2 text-2xl font-bold text-primary-950">Acceso denegado</h1>
-          <p className="mb-6 text-primary-600">No tienes permisos para acceder a esta pagina.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="text-center max-w-md">
+          <div className="text-6xl mb-4">🔒</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Acceso Denegado
+          </h1>
+          <p className="text-gray-600 mb-6">
+            No tienes permisos para acceder a esta página.
+          </p>
           {user?.role && (
-            <p className="text-sm text-primary-400">
-              Tu rol: <span className="font-semibold capitalize text-primary-600">{user.role}</span>
+            <p className="text-sm text-gray-500">
+              Tu rol:{' '}
+              <span className="font-semibold capitalize">
+                {user.role}
+              </span>
             </p>
           )}
         </div>
@@ -33,5 +43,8 @@ export default function ProtectedRoute({ children, roles = [] }) {
     )
   }
 
+  // ✅ IMPORTANT FIX:
+  // If children exist → render them
+  // Otherwise → render nested routes via Outlet
   return children ? children : <Outlet />
 }

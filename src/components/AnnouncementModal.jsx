@@ -86,20 +86,20 @@ export default function AnnouncementModal() {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="w-full max-w-lg rounded-2xl border border-primary-100 bg-white p-6 shadow-2xl"
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-primary-950">
+                <h2 className="text-2xl font-bold text-gray-900">
                   {announcement.title}
                 </h2>
-                <p className="mt-2 whitespace-pre-line text-primary-600">
+                <p className="mt-2 text-gray-700 whitespace-pre-line">
                   {announcement.message}
                 </p>
               </div>
               <button
                 onClick={dismissAnnouncement}
-                className="text-primary-300 transition-colors hover:text-accent-600"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
                 aria-label="Cerrar anuncio"
               >
                 <X className="h-5 w-5" />

@@ -12,7 +12,7 @@
   }
   
   body {
-    @apply bg-white text-primary-600 font-sans antialiased;
+    @apply bg-gray-50 text-gray-900 font-sans antialiased;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -31,15 +31,15 @@
   }
   
   .gradient-success {
-    @apply bg-gradient-to-br from-primary-600 to-primary-900;
+    @apply bg-gradient-to-br from-success-500 to-success-700;
   }
   
   .gradient-accent {
-    @apply bg-gradient-to-br from-accent-600 to-accent-700;
+    @apply bg-gradient-to-br from-accent-500 to-accent-700;
   }
   
   .gradient-dark {
-    @apply bg-gradient-to-br from-primary-700 to-primary-950;
+    @apply bg-gradient-to-br from-gray-800 to-gray-900;
   }
   
   /* Card con hover effect */
@@ -49,7 +49,7 @@
   
   /* Texto con gradiente */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-900 to-accent-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800;
   }
   
   /* Scrollbar personalizado */
@@ -58,16 +58,16 @@
   }
   
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-primary-100 rounded;
+    @apply bg-gray-100 rounded;
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-primary-300 rounded hover:bg-primary-500;
+    @apply bg-gray-400 rounded hover:bg-gray-500;
   }
   
   /* Loading spinner */
   .spinner {
-    @apply inline-block w-8 h-8 border-4 border-primary-100 border-t-accent-600 rounded-full animate-spin;
+    @apply inline-block w-8 h-8 border-4 border-gray-200 border-t-primary-600 rounded-full animate-spin;
   }
   
   /* Input con focus mejorado */
@@ -112,7 +112,7 @@
   }
   
   .glass-dark {
-    @apply bg-primary-950/80 backdrop-blur-lg border border-primary-700/20;
+    @apply bg-gray-900/80 backdrop-blur-lg border border-gray-700/20;
   }
 }
 

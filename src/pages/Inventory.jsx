@@ -442,7 +442,7 @@ export default function Inventory() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold text-gradient">Inventario</h1>
-            <p className="mt-1 text-primary-500">
+            <p className="text-gray-600 mt-1">
               {total} productos • {mode === 'low' ? 'Stock Bajo' : 'Todos'}
             </p>
           </div>
