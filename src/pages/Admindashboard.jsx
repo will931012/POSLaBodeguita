@@ -458,7 +458,7 @@ export default function AdminDashboard() {
             {activeTab === 'perfumes' && (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
                 <PerfumeSalesSection perfumeProducts={perfumeProducts} />
-                <PerfumesInventory allPerfumes={allPerfumes} />
+                <PerfumesInventory allPerfumes={allPerfumes} token={token} />
               </div>
             )}
 

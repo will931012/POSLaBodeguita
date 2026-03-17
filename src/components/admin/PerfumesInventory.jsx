@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronUp, Search, Sparkles } from 'lucide-react'
-import ExcelTableCard from './ExcelTableCard.jsx'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, ChevronDown, ChevronUp, Edit2, Search, Sparkles, X } from 'lucide-react'
+import { toast } from 'sonner'
+import Card from '@components/Card'
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 const getStockStatus = (qty) => {
   if (qty === 0) return 'Agotado'
@@ -9,16 +12,34 @@ const getStockStatus = (qty) => {
   return 'OK'
 }
 
-export default function PerfumesInventory({ allPerfumes }) {
+export default function PerfumesInventory({ allPerfumes, token }) {
   const [upcFilter, setUpcFilter] = useState('')
   const [nameFilter, setNameFilter] = useState('')
   const [isOpen, setIsOpen] = useState(true)
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({
+    upc: '',
+    name: '',
+    category: '',
+    price: '',
+    qty: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [localPerfumes, setLocalPerfumes] = useState(allPerfumes)
+
+  useEffect(() => {
+    setLocalPerfumes(allPerfumes)
+  }, [allPerfumes])
+
+  const hasActiveFilter = upcFilter.trim() !== '' || nameFilter.trim() !== ''
 
   const filteredPerfumes = useMemo(() => {
+    if (!hasActiveFilter) return []
+
     const normalizedUpc = upcFilter.trim().toLowerCase()
     const normalizedName = nameFilter.trim().toLowerCase()
 
-    return allPerfumes.filter((perfume) => {
+    return localPerfumes.filter((perfume) => {
       const perfumeUpc = String(perfume.upc || '').toLowerCase()
       const perfumeName = String(perfume.name || '').toLowerCase()
 
@@ -27,21 +48,82 @@ export default function PerfumesInventory({ allPerfumes }) {
 
       return matchesUpc && matchesName
     })
-  }, [allPerfumes, nameFilter, upcFilter])
+  }, [hasActiveFilter, localPerfumes, nameFilter, upcFilter])
 
-  const rows = filteredPerfumes.map((perfume) => {
-    const stock = Number(perfume.qty) || 0
+  const startEdit = (perfume) => {
+    setEditingId(perfume.id)
+    setEditForm({
+      upc: perfume.upc || '',
+      name: perfume.name || '',
+      category: perfume.category || '',
+      price: perfume.price ?? '',
+      qty: perfume.qty ?? '',
+    })
+  }
 
-    return {
-      key: perfume.id,
-      upc: perfume.upc || <span className="text-slate-400">-</span>,
-      name: perfume.name || 'Sin nombre',
-      category: perfume.category || 'Sin categoria',
-      price: `$${(Number(perfume.price) || 0).toFixed(2)}`,
-      stock,
-      status: getStockStatus(stock),
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditForm({
+      upc: '',
+      name: '',
+      category: '',
+      price: '',
+      qty: '',
+    })
+  }
+
+  const saveEdit = async (perfumeId) => {
+    if (!editForm.name.trim()) {
+      toast.error('El nombre es obligatorio')
+      return
     }
-  })
+
+    setSaving(true)
+
+    try {
+      const response = await fetch(`${API}/api/products/${perfumeId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          upc: editForm.upc.trim() || null,
+          name: editForm.name.trim(),
+          category: editForm.category.trim() || null,
+          price: Number(editForm.price) || 0,
+          qty: parseInt(editForm.qty, 10) || 0,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'No se pudo guardar el perfume')
+      }
+
+      setLocalPerfumes((current) =>
+        current.map((perfume) =>
+          perfume.id === perfumeId
+            ? {
+                ...perfume,
+                upc: editForm.upc.trim(),
+                name: editForm.name.trim(),
+                category: editForm.category.trim(),
+                price: Number(editForm.price) || 0,
+                qty: parseInt(editForm.qty, 10) || 0,
+              }
+            : perfume
+        )
+      )
+
+      toast.success('Perfume actualizado')
+      cancelEdit()
+    } catch (error) {
+      toast.error(error.message || 'Error al guardar cambios')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -54,7 +136,7 @@ export default function PerfumesInventory({ allPerfumes }) {
             <div>
               <h2 className="text-xl font-bold text-slate-900">Inventario de perfumes</h2>
               <p className="text-sm text-slate-600">
-                {filteredPerfumes.length} de {allPerfumes.length} productos visibles
+                Escribe un UPC o Name para mostrar resultados editables
               </p>
             </div>
           </div>
@@ -101,21 +183,159 @@ export default function PerfumesInventory({ allPerfumes }) {
       </div>
 
       {isOpen ? (
-        <ExcelTableCard
-          title="Tabla de inventario"
-          subtitle="Vista tipo Excel con filtros por UPC y nombre"
-          icon={Sparkles}
-          headers={[
-            { key: 'upc', label: 'UPC', cellClassName: 'font-mono whitespace-nowrap' },
-            { key: 'name', label: 'Name' },
-            { key: 'category', label: 'Categoria' },
-            { key: 'price', label: 'Precio', cellClassName: 'font-mono whitespace-nowrap' },
-            { key: 'stock', label: 'Stock', cellClassName: 'font-mono whitespace-nowrap' },
-            { key: 'status', label: 'Estado', cellClassName: 'font-semibold whitespace-nowrap' },
-          ]}
-          rows={rows}
-          emptyMessage="No hay perfumes que coincidan con los filtros"
-        />
+        <Card className="border border-slate-200 shadow-sm">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-800">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Tabla de inventario</h2>
+              <p className="text-sm text-slate-600">
+                {hasActiveFilter
+                  ? `${filteredPerfumes.length} resultado(s) editable(s)`
+                  : 'La tabla se llena solo con los filtros'}
+              </p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-slate-300">
+            <table className="w-full border-collapse text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">UPC</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Name</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Categoria</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Precio</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Stock</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Estado</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!hasActiveFilter ? (
+                  <tr>
+                    <td colSpan="7" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
+                      Escribe un valor en UPC o Name para mostrar productos.
+                    </td>
+                  </tr>
+                ) : filteredPerfumes.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
+                      No hay perfumes que coincidan con los filtros.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPerfumes.map((perfume, index) => {
+                    const stock = Number(perfume.qty) || 0
+                    const isEditing = editingId === perfume.id
+
+                    return (
+                      <tr key={perfume.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                        {isEditing ? (
+                          <>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <input
+                                type="text"
+                                value={editForm.upc}
+                                onChange={(event) => setEditForm({ ...editForm, upc: event.target.value })}
+                                className="w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+                              />
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <input
+                                type="text"
+                                value={editForm.name}
+                                onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                                className="w-full rounded border border-slate-300 px-2 py-1"
+                              />
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <input
+                                type="text"
+                                value={editForm.category}
+                                onChange={(event) => setEditForm({ ...editForm, category: event.target.value })}
+                                className="w-full rounded border border-slate-300 px-2 py-1"
+                              />
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editForm.price}
+                                onChange={(event) => setEditForm({ ...editForm, price: event.target.value })}
+                                className="w-24 rounded border border-slate-300 px-2 py-1 font-mono"
+                              />
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <input
+                                type="number"
+                                value={editForm.qty}
+                                onChange={(event) => setEditForm({ ...editForm, qty: event.target.value })}
+                                className="w-20 rounded border border-slate-300 px-2 py-1 font-mono"
+                              />
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 font-semibold text-slate-600">
+                              {getStockStatus(parseInt(editForm.qty, 10) || 0)}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => saveEdit(perfume.id)}
+                                  disabled={saving}
+                                  className="rounded-lg p-2 text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                  title="Guardar"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelEdit}
+                                  disabled={saving}
+                                  className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                  title="Cancelar"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="border border-slate-300 px-3 py-2 font-mono text-slate-800">
+                              {perfume.upc || <span className="text-slate-400">-</span>}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 text-slate-800">{perfume.name}</td>
+                            <td className="border border-slate-300 px-3 py-2 text-slate-800">
+                              {perfume.category || <span className="text-slate-400">-</span>}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 font-mono text-slate-800">
+                              ${(Number(perfume.price) || 0).toFixed(2)}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 font-mono text-slate-800">{stock}</td>
+                            <td className="border border-slate-300 px-3 py-2 font-semibold text-slate-800">
+                              {getStockStatus(stock)}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => startEdit(perfume)}
+                                className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-50"
+                                title="Editar"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       ) : null}
     </div>
   )
