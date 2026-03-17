@@ -12,7 +12,7 @@ const getStockStatus = (qty) => {
   return 'OK'
 }
 
-export default function PerfumesInventory({ allPerfumes, token }) {
+export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated }) {
   const [upcFilter, setUpcFilter] = useState('')
   const [nameFilter, setNameFilter] = useState('')
   const [isOpen, setIsOpen] = useState(true)
@@ -101,20 +101,17 @@ export default function PerfumesInventory({ allPerfumes, token }) {
         throw new Error(errorData.error || 'No se pudo guardar el perfume')
       }
 
+      const updatedPerfume = await response.json()
+
       setLocalPerfumes((current) =>
         current.map((perfume) =>
           perfume.id === perfumeId
-            ? {
-                ...perfume,
-                upc: editForm.upc.trim(),
-                name: editForm.name.trim(),
-                category: editForm.category.trim(),
-                price: Number(editForm.price) || 0,
-                qty: parseInt(editForm.qty, 10) || 0,
-              }
+            ? updatedPerfume
             : perfume
         )
       )
+
+      onPerfumeUpdated?.(updatedPerfume)
 
       toast.success('Perfume actualizado')
       cancelEdit()
@@ -199,7 +196,7 @@ export default function PerfumesInventory({ allPerfumes, token }) {
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-slate-300">
-            <table className="w-full border-collapse text-sm">
+            <table className="w-full min-w-[760px] border-collapse text-sm">
               <thead className="bg-slate-100">
                 <tr>
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">UPC</th>
@@ -208,7 +205,9 @@ export default function PerfumesInventory({ allPerfumes, token }) {
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Precio</th>
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Stock</th>
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Estado</th>
-                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Acciones</th>
+                  <th className="sticky right-0 z-10 border border-slate-300 bg-slate-100 px-3 py-2 text-left font-semibold text-slate-700">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -277,7 +276,7 @@ export default function PerfumesInventory({ allPerfumes, token }) {
                             <td className="border border-slate-300 px-3 py-2 font-semibold text-slate-600">
                               {getStockStatus(parseInt(editForm.qty, 10) || 0)}
                             </td>
-                            <td className="border border-slate-300 px-3 py-2">
+                            <td className="sticky right-0 border border-slate-300 bg-white px-3 py-2">
                               <div className="flex gap-1">
                                 <button
                                   type="button"
@@ -316,7 +315,7 @@ export default function PerfumesInventory({ allPerfumes, token }) {
                             <td className="border border-slate-300 px-3 py-2 font-semibold text-slate-800">
                               {getStockStatus(stock)}
                             </td>
-                            <td className="border border-slate-300 px-3 py-2">
+                            <td className="sticky right-0 border border-slate-300 bg-inherit px-3 py-2">
                               <button
                                 type="button"
                                 onClick={() => startEdit(perfume)}
@@ -335,6 +334,9 @@ export default function PerfumesInventory({ allPerfumes, token }) {
               </tbody>
             </table>
           </div>
+          <p className="mt-3 text-xs text-slate-500">
+            La columna de acciones queda fija a la derecha para que siempre puedas editar aunque la tabla tenga scroll horizontal.
+          </p>
         </Card>
       ) : null}
     </div>

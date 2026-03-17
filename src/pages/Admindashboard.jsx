@@ -246,6 +246,14 @@ export default function AdminDashboard() {
     return categoryData[0]?.category || 'Sin categoria'
   }, [categoryData])
 
+  const handlePerfumeUpdated = (updatedPerfume) => {
+    setAllPerfumes((current) =>
+      current.map((perfume) => (
+        perfume.id === updatedPerfume.id ? updatedPerfume : perfume
+      ))
+    )
+  }
+
   const handleAnnouncementSubmit = async (event) => {
     event.preventDefault()
     if (!announcementMessage.trim()) {
@@ -458,7 +466,11 @@ export default function AdminDashboard() {
             {activeTab === 'perfumes' && (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
                 <PerfumeSalesSection perfumeProducts={perfumeProducts} />
-                <PerfumesInventory allPerfumes={allPerfumes} token={token} />
+                <PerfumesInventory
+                  allPerfumes={allPerfumes}
+                  token={token}
+                  onPerfumeUpdated={handlePerfumeUpdated}
+                />
               </div>
             )}
 
