@@ -50,6 +50,7 @@ export default function AdminDashboard() {
   const [announcementTitle, setAnnouncementTitle] = useState('')
   const [announcementMessage, setAnnouncementMessage] = useState('')
   const [announcementSending, setAnnouncementSending] = useState(false)
+  const [activeTab, setActiveTab] = useState('ventas')
   const [todaySales, setTodaySales] = useState({
     count: 0,
     revenue: 0,
@@ -318,91 +319,154 @@ export default function AdminDashboard() {
           </div>
         </motion.div>
 
+        <div className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200 p-2 shadow-sm">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveTab('ventas')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'ventas'
+                  ? 'bg-blue-700 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Ventas
+            </button>
+            <button
+              onClick={() => setActiveTab('perfumes')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'perfumes'
+                  ? 'bg-blue-700 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Perfumes
+            </button>
+            <button
+              onClick={() => setActiveTab('top')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'top'
+                  ? 'bg-blue-700 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Top productos
+            </button>
+            <button
+              onClick={() => setActiveTab('mensaje')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'mensaje'
+                  ? 'bg-blue-700 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Mensaje global
+            </button>
+            <button
+              onClick={() => setActiveTab('clientes')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'clientes'
+                  ? 'bg-blue-700 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Clientes
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="spinner"></div>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                icon={ShoppingBag}
-                label="Total Ventas"
-                value={summary.totalSales || 0}
-                color="purple"
-                delay={0}
-              />
-              <StatCard
-                icon={DollarSign}
-                label="Ingresos Totales"
-                value={`$${(summary.totalRevenue || 0).toFixed(2)}`}
-                color="green"
-                delay={0.1}
-              />
-              <StatCard
-                icon={Sparkles}
-                label="Ventas de Perfumes"
-                value={summary.perfumeSales || 0}
-                color="pink"
-                delay={0.2}
-                badge={`${perfumePercentage}%`}
-              />
-              <StatCard
-                icon={TrendingUp}
-                label="Ticket Promedio"
-                value={`$${averageTicket}`}
-                color="blue"
-                delay={0.3}
-              />
-            </div>
+            {activeTab === 'ventas' && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard
+                    icon={ShoppingBag}
+                    label="Total Ventas"
+                    value={summary.totalSales || 0}
+                    color="purple"
+                    delay={0}
+                  />
+                  <StatCard
+                    icon={DollarSign}
+                    label="Ingresos Totales"
+                    value={`$${(summary.totalRevenue || 0).toFixed(2)}`}
+                    color="green"
+                    delay={0.1}
+                  />
+                  <StatCard
+                    icon={Sparkles}
+                    label="Ventas de Perfumes"
+                    value={summary.perfumeSales || 0}
+                    color="pink"
+                    delay={0.2}
+                    badge={`${perfumePercentage}%`}
+                  />
+                  <StatCard
+                    icon={TrendingUp}
+                    label="Ticket Promedio"
+                    value={`$${averageTicket}`}
+                    color="blue"
+                    delay={0.3}
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Categoria lider</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{topCategory}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Categoria lider</p>
+                    <p className="mt-2 text-2xl font-bold text-slate-900">{topCategory}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Categorias activas</p>
+                    <p className="mt-2 text-2xl font-bold text-slate-900">{summary.totalCategories || 0}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Perfumes hoy</p>
+                    <p className="mt-2 text-2xl font-bold text-slate-900">{todaySales.perfumeCount || 0}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Ingresos hoy</p>
+                    <p className="mt-2 text-2xl font-bold text-slate-900">${(todaySales.revenue || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <SalesInsightsPies
+                  categoryData={categoryData}
+                  locationBreakdown={locationBreakdown}
+                  summary={summary}
+                />
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <TodaySales todaySales={todaySales} />
+                  <MetricsTable
+                    summary={summary}
+                    todaySales={todaySales}
+                    perfumePercentage={perfumePercentage}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <CategoriesSection categoryData={categoryData} />
+                  <LocationBreakdownTable locations={locationBreakdown} />
+                </div>
+              </>
+            )}
+
+            {activeTab === 'perfumes' && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+                <PerfumeSalesSection perfumeProducts={perfumeProducts} />
+                <PerfumesInventory allPerfumes={allPerfumes} />
               </div>
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Categorias activas</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{summary.totalCategories || 0}</p>
-              </div>
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Perfumes hoy</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{todaySales.perfumeCount || 0}</p>
-              </div>
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Ingresos hoy</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">${(todaySales.revenue || 0).toFixed(2)}</p>
-              </div>
-            </div>
+            )}
 
-            <SalesInsightsPies
-              categoryData={categoryData}
-              locationBreakdown={locationBreakdown}
-              summary={summary}
-            />
+            {activeTab === 'top' && (
+              <TopProductsTable topProducts={topProducts} />
+            )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <TodaySales todaySales={todaySales} />
-              <MetricsTable
-                summary={summary}
-                todaySales={todaySales}
-                perfumePercentage={perfumePercentage}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <CategoriesSection categoryData={categoryData} />
-              <LocationBreakdownTable locations={locationBreakdown} />
-            </div>
-
-            <TopProductsTable topProducts={topProducts} />
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-              <PerfumeSalesSection perfumeProducts={perfumeProducts} />
-              <PerfumesInventory allPerfumes={allPerfumes} />
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+            {activeTab === 'mensaje' && (
               <div className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200 p-6 shadow-sm">
                 <h2 className="text-xl font-bold text-slate-900">Mensaje global</h2>
                 <p className="text-sm text-slate-600 mt-1">
@@ -438,9 +502,11 @@ export default function AdminDashboard() {
                   </Button>
                 </form>
               </div>
+            )}
 
-              <CustomerCampaignsTab token={token} active />
-            </div>
+            {activeTab === 'clientes' && (
+              <CustomerCampaignsTab token={token} active={activeTab === 'clientes'} />
+            )}
           </>
         )}
       </div>
