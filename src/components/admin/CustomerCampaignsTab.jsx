@@ -40,9 +40,7 @@ export default function CustomerCampaignsTab({ token, active }) {
       setCampaigns(campaignsData)
       setSelectedRecipients((current) => {
         if (current.length === 0) {
-          return customersData
-            .filter((customer) => ['yordanka', 'william'].includes(customer.name?.trim().toLowerCase()))
-            .map((customer) => customer.id)
+          return []
         }
 
         return current.filter((id) => customersData.some((customer) => customer.id === id))
@@ -77,16 +75,14 @@ export default function CustomerCampaignsTab({ token, active }) {
   }
 
   const selectSuggestedTestRecipients = () => {
-    const suggested = customers
-      .filter((customer) => ['yordanka', 'william'].includes(customer.name?.trim().toLowerCase()))
-      .map((customer) => customer.id)
+    const suggested = customers.slice(0, 2).map((customer) => customer.id)
 
     setSelectedRecipients(suggested)
 
     if (suggested.length > 0) {
-      toast.success('Seleccionados Yordanka y William para la prueba')
+      toast.success('Seleccionados los primeros clientes disponibles')
     } else {
-      toast.error('No encontre Yordanka y William en la tabla actual')
+      toast.error('No hay clientes disponibles en la tabla actual')
     }
   }
 
@@ -163,8 +159,8 @@ export default function CustomerCampaignsTab({ token, active }) {
           <p className="text-3xl font-bold text-slate-900 mt-2">{customerStats.withPhone}</p>
         </Card>
         <Card className="border border-slate-200 shadow-sm">
-          <p className="text-sm font-semibold text-slate-500 uppercase">Sin telefono</p>
-          <p className="text-3xl font-bold text-slate-900 mt-2">{customerStats.total - customerStats.withPhone}</p>
+          <p className="text-sm font-semibold text-slate-500 uppercase">Seleccionados</p>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{selectedRecipients.length}</p>
         </Card>
       </div>
 
@@ -176,7 +172,7 @@ export default function CustomerCampaignsTab({ token, active }) {
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900">Clientes registrados</h2>
-              <p className="text-sm text-slate-600">Tabla con nombre y telefono</p>
+              <p className="text-sm text-slate-600">Tabla con customer id y telefono</p>
             </div>
           </div>
 
@@ -201,7 +197,7 @@ export default function CustomerCampaignsTab({ token, active }) {
 
         <div className="flex flex-wrap gap-2 mb-4">
           <Button type="button" variant="outline" onClick={selectSuggestedTestRecipients}>
-            Solo Yordanka y William
+            Seleccionar 2
           </Button>
           <Button type="button" variant="outline" onClick={selectAllVisibleRecipients}>
             Seleccionar visibles
@@ -219,7 +215,7 @@ export default function CustomerCampaignsTab({ token, active }) {
             <thead className="bg-slate-100">
               <tr>
                 <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Enviar</th>
-                <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Nombre</th>
+                <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Customer ID</th>
                 <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Telefono</th>
               </tr>
             </thead>
@@ -241,7 +237,7 @@ export default function CustomerCampaignsTab({ token, active }) {
                         className="w-4 h-4 accent-primary-600"
                       />
                     </td>
-                    <td className="border border-slate-300 px-3 py-2">{customer.name || '-'}</td>
+                    <td className="border border-slate-300 px-3 py-2 font-mono">{customer.id}</td>
                     <td className="border border-slate-300 px-3 py-2">{customer.phone || '-'}</td>
                   </tr>
                 ))

@@ -137,73 +137,12 @@ async function initDatabase() {
     await query(`
       CREATE TABLE IF NOT EXISTS customers (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(255),
         phone VARCHAR(50) UNIQUE NOT NULL,
-        accepts_sms BOOLEAN NOT NULL DEFAULT true,
-        accepts_whatsapp BOOLEAN NOT NULL DEFAULT true,
-        active BOOLEAN NOT NULL DEFAULT true,
-        registered_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
-        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
     console.log('✅ Customers table ready')
 
-    await query(`
-      ALTER TABLE customers
-      ADD COLUMN IF NOT EXISTS phone VARCHAR(50)
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      ALTER COLUMN name DROP NOT NULL
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      ADD COLUMN IF NOT EXISTS accepts_sms BOOLEAN NOT NULL DEFAULT true
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      ADD COLUMN IF NOT EXISTS accepts_whatsapp BOOLEAN NOT NULL DEFAULT true
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      ADD COLUMN IF NOT EXISTS registered_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      DROP COLUMN IF EXISTS email
-    `)
-
-    await query(`
-      ALTER TABLE customers
-      DROP COLUMN IF EXISTS accepts_email
-    `)
 
     // Customer campaigns table
     await query(`
@@ -234,7 +173,6 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_closures_day ON closures(day);
       CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at);
       CREATE INDEX IF NOT EXISTS idx_announcement_reads_user_id ON announcement_reads(user_id);
-      CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
       CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
       CREATE INDEX IF NOT EXISTS idx_customer_campaigns_created_at ON customer_campaigns(created_at);
     `)

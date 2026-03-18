@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Phone, UserPlus, Users, X } from 'lucide-react'
+import { Phone, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import Input from '@components/Input'
 import Button from '@components/Button'
@@ -17,7 +17,6 @@ export default function CustomerQuickRegister({
 }) {
   const [internalShowModal, setInternalShowModal] = useState(false)
   const [form, setForm] = useState({
-    name: '',
     phone: '',
   })
   const [saving, setSaving] = useState(false)
@@ -54,7 +53,7 @@ export default function CustomerQuickRegister({
   }
 
   const resetForm = () => {
-    setForm({ name: '', phone: '' })
+    setForm({ phone: '' })
   }
 
   const closeModal = () => {
@@ -136,7 +135,7 @@ export default function CustomerQuickRegister({
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Registrar cliente</h2>
                     <p className="text-sm text-gray-600">
-                      Guarda el telefono del cliente sin interrumpir la venta
+                      Guarda el telefono del cliente
                     </p>
                   </div>
                 </div>
@@ -152,14 +151,7 @@ export default function CustomerQuickRegister({
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Nombre opcional"
-                    value={form.name}
-                    onChange={(event) => updateField('name', event.target.value)}
-                    placeholder="Nombre del cliente"
-                    icon={UserPlus}
-                  />
+                <div className="grid grid-cols-1 gap-4">
                   <Input
                     label="Telefono"
                     value={form.phone}

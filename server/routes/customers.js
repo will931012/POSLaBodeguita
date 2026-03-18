@@ -21,28 +21,19 @@ router.get('/', requireRole(['admin', 'manager']), async (req, res) => {
     let sql = `
       SELECT
         c.id,
-        c.name,
-        c.phone,
-        c.accepts_sms,
-        c.accepts_whatsapp,
-        c.created_at,
-        l.name as registered_location_name
+        c.phone
       FROM customers c
-      LEFT JOIN locations l ON l.id = c.registered_location_id
-      WHERE c.active = true
+      WHERE 1 = 1
     `
 
     if (search) {
       params.push(`%${search.toLowerCase()}%`)
       sql += `
-        AND (
-          LOWER(c.name) LIKE $${params.length}
-          OR LOWER(COALESCE(c.phone, '')) LIKE $${params.length}
-        )
+        AND LOWER(COALESCE(c.phone, '')) LIKE $${params.length}
       `
     }
 
-    sql += ' ORDER BY c.created_at DESC LIMIT 500'
+    sql += ' ORDER BY c.id DESC LIMIT 500'
 
     const result = await query(sql, params)
     res.json(result.rows)
@@ -56,14 +47,7 @@ router.get('/', requireRole(['admin', 'manager']), async (req, res) => {
 // ============================================
 router.post('/', async (req, res) => {
   try {
-    const {
-      name,
-      phone,
-      accepts_sms = true,
-      accepts_whatsapp = true,
-    } = req.body || {}
-
-    const cleanName = name?.trim() || null
+    const { phone } = req.body || {}
     const cleanPhone = normalizePhone(phone)
 
     if (!cleanPhone) {
@@ -74,8 +58,7 @@ router.post('/', async (req, res) => {
       `
       SELECT *
       FROM customers
-      WHERE active = true
-        AND phone = $1
+      WHERE phone = $1
       LIMIT 1
       `,
       [cleanPhone]
@@ -85,20 +68,12 @@ router.post('/', async (req, res) => {
       const updated = await query(
         `
         UPDATE customers
-        SET
-          name = COALESCE($1, name),
-          phone = $2,
-          accepts_sms = $3,
-          accepts_whatsapp = $4,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $5
-        RETURNING id, name, phone, accepts_sms, accepts_whatsapp, created_at, updated_at
+        SET phone = $1
+        WHERE id = $2
+        RETURNING id, phone
         `,
         [
-          cleanName,
           cleanPhone,
-          Boolean(accepts_sms),
-          Boolean(accepts_whatsapp),
           existing.rows[0].id
         ]
       )
@@ -111,25 +86,11 @@ router.post('/', async (req, res) => {
 
     const result = await query(
       `
-      INSERT INTO customers (
-        name,
-        phone,
-        accepts_sms,
-        accepts_whatsapp,
-        registered_location_id,
-        created_by
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, name, phone, accepts_sms, accepts_whatsapp, created_at
+      INSERT INTO customers (phone)
+      VALUES ($1)
+      RETURNING id, phone
       `,
-      [
-        cleanName,
-        cleanPhone,
-        Boolean(accepts_sms),
-        Boolean(accepts_whatsapp),
-        req.location?.id || null,
-        req.user?.id || null,
-      ]
+      [cleanPhone]
     )
 
     res.status(201).json(result.rows[0])
@@ -188,13 +149,11 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
     }
 
     const recipientQuery = `
-      SELECT id, name, phone
+      SELECT id, phone
       FROM customers
-      WHERE active = true
-        AND accepts_sms = true
-        AND phone IS NOT NULL
+      WHERE phone IS NOT NULL
         ${recipientIds.length > 0 ? 'AND id = ANY($1)' : ''}
-      ORDER BY COALESCE(name, phone) ASC
+      ORDER BY phone ASC
     `
 
     const recipientsResult = await query(
@@ -269,7 +228,6 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
             .filter(({ result }) => result.status === 'rejected')
             .map(({ recipient, result }) => ({
               id: recipient.id,
-              name: recipient.name,
               phone: recipient.phone,
               error: result.reason?.message || 'Error al enviar',
             })),
