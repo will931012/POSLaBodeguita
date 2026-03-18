@@ -7,7 +7,22 @@ const router = express.Router()
 
 function normalizePhone(phone) {
   if (!phone || !phone.trim()) return null
-  return phone.replace(/[^\d+]/g, '').trim() || null
+  const cleaned = phone.replace(/[^\d+]/g, '').trim()
+  if (!cleaned) return null
+
+  if (cleaned.startsWith('+')) {
+    return cleaned
+  }
+
+  if (/^\d{10}$/.test(cleaned)) {
+    return `+1${cleaned}`
+  }
+
+  if (/^1\d{10}$/.test(cleaned)) {
+    return `+${cleaned}`
+  }
+
+  return cleaned
 }
 
 // ============================================
