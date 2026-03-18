@@ -12,6 +12,7 @@ import TempProductForm from '@/components/caja/TempProductForm'
 import CartSidebar from '@/components/caja/CartSidebar'
 import TicketModal from '@/components/caja/TicketModal'
 import CustomerQuickRegister from '@/components/caja/CustomerQuickRegister'
+import SavePhonePromptModal from '@/components/caja/SavePhonePromptModal'
 import ScanErrorModal from '@/components/caja/ScanErrorModal'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -49,6 +50,8 @@ export default function Caja() {
   const [tempForm, setTempForm] = useState({ name: '', price: '', qty: '1' })
   
   // Modal State
+  const [showSavePhonePrompt, setShowSavePhonePrompt] = useState(false)
+  const [showCustomerRegisterModal, setShowCustomerRegisterModal] = useState(false)
   const [showTicketModal, setShowTicketModal] = useState(false)
   const [pendingReceipt, setPendingReceipt] = useState(null)
   const [verse, setVerse] = useState(null)
@@ -196,7 +199,13 @@ export default function Caja() {
         return
       }
 
-      if (event.key === 'Enter' && !isEditableTarget(event.target) && !showTicketModal) {
+      if (
+        event.key === 'Enter'
+        && !isEditableTarget(event.target)
+        && !showTicketModal
+        && !showSavePhonePrompt
+        && !showCustomerRegisterModal
+      ) {
         event.preventDefault()
         completeSale()
       }
@@ -204,7 +213,18 @@ export default function Caja() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [mode, showTicketModal, cart, paymentMethod, cashReceived, products, tempProducts, isCompletingSale])
+  }, [
+    mode,
+    showTicketModal,
+    showSavePhonePrompt,
+    showCustomerRegisterModal,
+    cart,
+    paymentMethod,
+    cashReceived,
+    products,
+    tempProducts,
+    isCompletingSale,
+  ])
 
   // ============================================
   // QUICK ADD
@@ -468,7 +488,7 @@ export default function Caja() {
 
       setPendingReceipt(receiptHTML)
       toast.success('¡Venta completada!')
-      setShowTicketModal(true)
+      setShowSavePhonePrompt(true)
       
     } catch (error) {
       console.error('Sale error:', error)
@@ -635,6 +655,31 @@ export default function Caja() {
     setMode('idle')
   }
 
+  const continueToTicketPrompt = () => {
+    setShowSavePhonePrompt(false)
+    setShowCustomerRegisterModal(false)
+    setShowTicketModal(true)
+  }
+
+  const handleSavePhonePromptResponse = (shouldSavePhone) => {
+    setShowSavePhonePrompt(false)
+
+    if (shouldSavePhone) {
+      setShowCustomerRegisterModal(true)
+      return
+    }
+
+    setShowTicketModal(true)
+  }
+
+  const handleCustomerRegisterModalChange = (isOpen) => {
+    setShowCustomerRegisterModal(isOpen)
+
+    if (!isOpen && pendingReceipt && !showTicketModal) {
+      setShowTicketModal(true)
+    }
+  }
+
   // ============================================
   // RENDER
   // ============================================
@@ -721,6 +766,17 @@ export default function Caja() {
       <TicketModal
         show={showTicketModal}
         onResponse={handleTicketResponse}
+      />
+      <SavePhonePromptModal
+        show={showSavePhonePrompt}
+        onResponse={handleSavePhonePromptResponse}
+      />
+      <CustomerQuickRegister
+        token={token}
+        open={showCustomerRegisterModal}
+        onOpenChange={handleCustomerRegisterModalChange}
+        onSuccess={continueToTicketPrompt}
+        hideTrigger
       />
       <ScanErrorModal
         show={showScanErrorModal}

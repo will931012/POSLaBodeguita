@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Mail, MessageSquare, RefreshCw, Search, Users } from 'lucide-react'
+import { MessageSquare, RefreshCw, Search, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '@components/Card'
 import Button from '@components/Button'
@@ -16,7 +16,6 @@ export default function CustomerCampaignsTab({ token, active }) {
   const [sending, setSending] = useState(false)
   const [form, setForm] = useState({
     title: '',
-    channel: 'email',
     message: '',
   })
 
@@ -101,7 +100,6 @@ export default function CustomerCampaignsTab({ token, active }) {
 
   const customerStats = useMemo(() => ({
     total: customers.length,
-    withEmail: customers.filter((customer) => customer.email).length,
     withPhone: customers.filter((customer) => customer.phone).length,
   }), [customers])
 
@@ -142,7 +140,6 @@ export default function CustomerCampaignsTab({ token, active }) {
 
       setForm({
         title: '',
-        channel: form.channel,
         message: '',
       })
 
@@ -162,12 +159,12 @@ export default function CustomerCampaignsTab({ token, active }) {
           <p className="text-3xl font-bold text-slate-900 mt-2">{customerStats.total}</p>
         </Card>
         <Card className="border border-slate-200 shadow-sm">
-          <p className="text-sm font-semibold text-slate-500 uppercase">Con email</p>
-          <p className="text-3xl font-bold text-slate-900 mt-2">{customerStats.withEmail}</p>
-        </Card>
-        <Card className="border border-slate-200 shadow-sm">
           <p className="text-sm font-semibold text-slate-500 uppercase">Con telefono</p>
           <p className="text-3xl font-bold text-slate-900 mt-2">{customerStats.withPhone}</p>
+        </Card>
+        <Card className="border border-slate-200 shadow-sm">
+          <p className="text-sm font-semibold text-slate-500 uppercase">Sin telefono</p>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{customerStats.total - customerStats.withPhone}</p>
         </Card>
       </div>
 
@@ -179,7 +176,7 @@ export default function CustomerCampaignsTab({ token, active }) {
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900">Clientes registrados</h2>
-              <p className="text-sm text-slate-600">Tabla con nombre, email y telefono</p>
+              <p className="text-sm text-slate-600">Tabla con nombre y telefono</p>
             </div>
           </div>
 
@@ -223,14 +220,13 @@ export default function CustomerCampaignsTab({ token, active }) {
               <tr>
                 <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Enviar</th>
                 <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Nombre</th>
-                <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Email</th>
                 <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Telefono</th>
               </tr>
             </thead>
             <tbody>
               {customers.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
+                  <td colSpan="3" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
                     {loading ? 'Cargando clientes...' : 'No hay clientes registrados'}
                   </td>
                 </tr>
@@ -245,8 +241,7 @@ export default function CustomerCampaignsTab({ token, active }) {
                         className="w-4 h-4 accent-primary-600"
                       />
                     </td>
-                    <td className="border border-slate-300 px-3 py-2">{customer.name}</td>
-                    <td className="border border-slate-300 px-3 py-2">{customer.email || '-'}</td>
+                    <td className="border border-slate-300 px-3 py-2">{customer.name || '-'}</td>
                     <td className="border border-slate-300 px-3 py-2">{customer.phone || '-'}</td>
                   </tr>
                 ))
@@ -259,40 +254,24 @@ export default function CustomerCampaignsTab({ token, active }) {
       <Card className="border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center">
-            {form.channel === 'email'
-              ? <Mail className="w-6 h-6 text-white" />
-              : <MessageSquare className="w-6 h-6 text-white" />
-            }
+            <MessageSquare className="w-6 h-6 text-white" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-900">Campanas de clientes</h2>
             <p className="text-sm text-slate-600">
-              Envia ofertas y avisos de mercancia nueva por email o SMS
+              Envia ofertas y avisos de mercancia nueva por SMS
             </p>
           </div>
         </div>
 
         <form onSubmit={handleSendCampaign} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <Input
               label="Titulo"
               value={form.title}
               onChange={(event) => updateForm('title', event.target.value)}
               placeholder="Nueva mercancia en tienda"
             />
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
-                Canal
-              </label>
-              <select
-                value={form.channel}
-                onChange={(event) => updateForm('channel', event.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 font-medium focus:outline-none focus:border-primary-600"
-              >
-                <option value="email">Email</option>
-                <option value="sms">SMS</option>
-              </select>
-            </div>
           </div>
 
           <div>
@@ -310,10 +289,7 @@ export default function CustomerCampaignsTab({ token, active }) {
 
           <div className="flex justify-end">
             <Button type="submit" loading={sending}>
-              {form.channel === 'email'
-                ? `Enviar emails a ${selectedRecipients.length}`
-                : `Enviar SMS a ${selectedRecipients.length}`
-              }
+              {`Enviar SMS a ${selectedRecipients.length}`}
             </Button>
           </div>
         </form>

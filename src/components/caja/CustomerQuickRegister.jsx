@@ -1,20 +1,35 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mail, Phone, UserPlus, Users, X } from 'lucide-react'
+import { Phone, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import Input from '@components/Input'
 import Button from '@components/Button'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-export default function CustomerQuickRegister({ token, shortcutSignal = 0 }) {
-  const [showModal, setShowModal] = useState(false)
+export default function CustomerQuickRegister({
+  token,
+  shortcutSignal = 0,
+  open,
+  onOpenChange,
+  onSuccess,
+  hideTrigger = false,
+}) {
+  const [internalShowModal, setInternalShowModal] = useState(false)
   const [form, setForm] = useState({
     name: '',
-    email: '',
     phone: '',
   })
   const [saving, setSaving] = useState(false)
+  const showModal = typeof open === 'boolean' ? open : internalShowModal
+
+  const setShowModal = (nextValue) => {
+    if (typeof open !== 'boolean') {
+      setInternalShowModal(nextValue)
+    }
+
+    onOpenChange?.(nextValue)
+  }
 
   useEffect(() => {
     if (!showModal) return undefined
@@ -39,7 +54,7 @@ export default function CustomerQuickRegister({ token, shortcutSignal = 0 }) {
   }
 
   const resetForm = () => {
-    setForm({ name: '', email: '', phone: '' })
+    setForm({ name: '', phone: '' })
   }
 
   const closeModal = () => {
@@ -50,13 +65,8 @@ export default function CustomerQuickRegister({ token, shortcutSignal = 0 }) {
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    if (!form.name.trim()) {
-      toast.error('Escribe el nombre del cliente')
-      return
-    }
-
-    if (!form.email.trim() && !form.phone.trim()) {
-      toast.error('Debes agregar email o telefono')
+    if (!form.phone.trim()) {
+      toast.error('Debes agregar el telefono del cliente')
       return
     }
 
@@ -77,6 +87,7 @@ export default function CustomerQuickRegister({ token, shortcutSignal = 0 }) {
       }
 
       toast.success(data.updatedExisting ? 'Cliente actualizado' : 'Cliente registrado')
+      onSuccess?.(data)
       resetForm()
       setShowModal(false)
     } catch (error) {
@@ -88,16 +99,18 @@ export default function CustomerQuickRegister({ token, shortcutSignal = 0 }) {
 
   return (
     <>
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          icon={Users}
-          onClick={() => setShowModal(true)}
-        >
-          Registrar cliente
-        </Button>
-      </div>
+      {!hideTrigger && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            icon={Users}
+            onClick={() => setShowModal(true)}
+          >
+            Registrar cliente
+          </Button>
+        </div>
+      )}
 
       <AnimatePresence>
         {showModal && (
@@ -123,7 +136,7 @@ export default function CustomerQuickRegister({ token, shortcutSignal = 0 }) {
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Registrar cliente</h2>
                     <p className="text-sm text-gray-600">
-                      Guarda nombre, email y telefono sin interrumpir la venta
+                      Guarda el telefono del cliente sin interrumpir la venta
                     </p>
                   </div>
                 </div>
@@ -139,21 +152,13 @@ export default function CustomerQuickRegister({ token, shortcutSignal = 0 }) {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="Nombre"
+                    label="Nombre opcional"
                     value={form.name}
                     onChange={(event) => updateField('name', event.target.value)}
                     placeholder="Nombre del cliente"
                     icon={UserPlus}
-                  />
-                  <Input
-                    label="Email"
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => updateField('email', event.target.value)}
-                    placeholder="cliente@email.com"
-                    icon={Mail}
                   />
                   <Input
                     label="Telefono"

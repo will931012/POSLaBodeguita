@@ -17,6 +17,27 @@ async function initDatabase() {
         console.log(`⏳ Waiting for database... attempt ${attempt}/${maxAttempts}`)
       }
 
+      const legacyCustomersTable = await query(`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = 'user'
+        ) AS exists
+      `)
+
+      const currentCustomersTable = await query(`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = 'customers'
+        ) AS exists
+      `)
+
+      if (legacyCustomersTable.rows[0]?.exists && !currentCustomersTable.rows[0]?.exists) {
+        await query('ALTER TABLE "user" RENAME TO customers')
+        console.log('âœ… Legacy user table renamed to customers')
+      }
+
     // Products table
     await query(`
       CREATE TABLE IF NOT EXISTS products (
@@ -116,10 +137,8 @@ async function initDatabase() {
     await query(`
       CREATE TABLE IF NOT EXISTS customers (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE,
-        phone VARCHAR(50) UNIQUE,
-        accepts_email BOOLEAN NOT NULL DEFAULT true,
+        name VARCHAR(255),
+        phone VARCHAR(50) UNIQUE NOT NULL,
         accepts_sms BOOLEAN NOT NULL DEFAULT true,
         accepts_whatsapp BOOLEAN NOT NULL DEFAULT true,
         active BOOLEAN NOT NULL DEFAULT true,
@@ -133,7 +152,57 @@ async function initDatabase() {
 
     await query(`
       ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS phone VARCHAR(50)
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      ALTER COLUMN name DROP NOT NULL
+    `)
+
+    await query(`
+      ALTER TABLE customers
       ADD COLUMN IF NOT EXISTS accepts_sms BOOLEAN NOT NULL DEFAULT true
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS accepts_whatsapp BOOLEAN NOT NULL DEFAULT true
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS registered_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      DROP COLUMN IF EXISTS email
+    `)
+
+    await query(`
+      ALTER TABLE customers
+      DROP COLUMN IF EXISTS accepts_email
     `)
 
     // Customer campaigns table
@@ -166,7 +235,6 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at);
       CREATE INDEX IF NOT EXISTS idx_announcement_reads_user_id ON announcement_reads(user_id);
       CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
-      CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
       CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
       CREATE INDEX IF NOT EXISTS idx_customer_campaigns_created_at ON customer_campaigns(created_at);
     `)

@@ -1,39 +1,13 @@
 const express = require('express')
 const { query } = require('../config/database')
 const { requireRole } = require('./auth')
-const { isMailConfigured, sendEmail } = require('../utils/mailer')
 const { isSmsConfigured, sendSms } = require('../utils/messaging')
 
 const router = express.Router()
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-function normalizeEmail(email) {
-  if (!email || !email.trim()) return null
-  return email.trim().toLowerCase()
-}
-
 function normalizePhone(phone) {
   if (!phone || !phone.trim()) return null
   return phone.replace(/[^\d+]/g, '').trim() || null
-}
-
-function buildCampaignEmail({ customerName, title, message }) {
-  const subject = title?.trim() || 'Nuevas ofertas para ti'
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #111827;">
-      <h1 style="font-size: 24px; margin-bottom: 12px;">${subject}</h1>
-      <p style="font-size: 16px; line-height: 1.6;">Hola ${customerName || 'cliente'},</p>
-      <div style="font-size: 16px; line-height: 1.7; white-space: pre-wrap;">${message}</div>
-      <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">
-        Gracias por preferirnos.
-      </p>
-    </div>
-  `
-
-  const text = `Hola ${customerName || 'cliente'},\n\n${message}\n\nGracias por preferirnos.`
-
-  return { subject, html, text }
 }
 
 // ============================================
@@ -48,9 +22,7 @@ router.get('/', requireRole(['admin', 'manager']), async (req, res) => {
       SELECT
         c.id,
         c.name,
-        c.email,
         c.phone,
-        c.accepts_email,
         c.accepts_sms,
         c.accepts_whatsapp,
         c.created_at,
@@ -65,7 +37,6 @@ router.get('/', requireRole(['admin', 'manager']), async (req, res) => {
       sql += `
         AND (
           LOWER(c.name) LIKE $${params.length}
-          OR LOWER(COALESCE(c.email, '')) LIKE $${params.length}
           OR LOWER(COALESCE(c.phone, '')) LIKE $${params.length}
         )
       `
@@ -87,27 +58,16 @@ router.post('/', async (req, res) => {
   try {
     const {
       name,
-      email,
       phone,
-      accepts_email = true,
       accepts_sms = true,
       accepts_whatsapp = true,
     } = req.body || {}
 
-    const cleanName = name?.trim()
-    const cleanEmail = normalizeEmail(email)
+    const cleanName = name?.trim() || null
     const cleanPhone = normalizePhone(phone)
 
-    if (!cleanName) {
-      return res.status(400).json({ error: 'El nombre es requerido' })
-    }
-
-    if (!cleanEmail && !cleanPhone) {
-      return res.status(400).json({ error: 'Debes indicar email o telefono' })
-    }
-
-    if (cleanEmail && !emailRegex.test(cleanEmail)) {
-      return res.status(400).json({ error: 'El email no es valido' })
+    if (!cleanPhone) {
+      return res.status(400).json({ error: 'Debes indicar un telefono' })
     }
 
     const existing = await query(
@@ -115,13 +75,10 @@ router.post('/', async (req, res) => {
       SELECT *
       FROM customers
       WHERE active = true
-        AND (
-          ($1::text IS NOT NULL AND email = $1)
-          OR ($2::text IS NOT NULL AND phone = $2)
-        )
+        AND phone = $1
       LIMIT 1
       `,
-      [cleanEmail, cleanPhone]
+      [cleanPhone]
     )
 
     if (existing.rows.length > 0) {
@@ -129,21 +86,17 @@ router.post('/', async (req, res) => {
         `
         UPDATE customers
         SET
-          name = $1,
-          email = COALESCE($2, email),
-          phone = COALESCE($3, phone),
-          accepts_email = $4,
-          accepts_sms = $5,
-          accepts_whatsapp = $6,
+          name = COALESCE($1, name),
+          phone = $2,
+          accepts_sms = $3,
+          accepts_whatsapp = $4,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $7
-        RETURNING id, name, email, phone, accepts_email, accepts_sms, accepts_whatsapp, created_at, updated_at
+        WHERE id = $5
+        RETURNING id, name, phone, accepts_sms, accepts_whatsapp, created_at, updated_at
         `,
         [
           cleanName,
-          cleanEmail,
           cleanPhone,
-          Boolean(accepts_email),
           Boolean(accepts_sms),
           Boolean(accepts_whatsapp),
           existing.rows[0].id
@@ -160,22 +113,18 @@ router.post('/', async (req, res) => {
       `
       INSERT INTO customers (
         name,
-        email,
         phone,
-        accepts_email,
         accepts_sms,
         accepts_whatsapp,
         registered_location_id,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, name, email, phone, accepts_email, accepts_sms, accepts_whatsapp, created_at
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, name, phone, accepts_sms, accepts_whatsapp, created_at
       `,
       [
         cleanName,
-        cleanEmail,
         cleanPhone,
-        Boolean(accepts_email),
         Boolean(accepts_sms),
         Boolean(accepts_whatsapp),
         req.location?.id || null,
@@ -222,10 +171,10 @@ router.get('/campaigns', requireRole('admin'), async (req, res) => {
 // ============================================
 router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
   try {
-    const { title, message, channel = 'email', recipient_ids = [] } = req.body || {}
+    const { title, message, recipient_ids = [] } = req.body || {}
     const cleanTitle = title?.trim() || 'Nueva oferta'
     const cleanMessage = message?.trim()
-    const cleanChannel = channel === 'sms' ? 'sms' : 'email'
+    const cleanChannel = 'sms'
     const recipientIds = Array.isArray(recipient_ids)
       ? recipient_ids.map((id) => parseInt(id, 10)).filter(Number.isFinite)
       : []
@@ -234,33 +183,19 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
       return res.status(400).json({ error: 'El mensaje es requerido' })
     }
 
-    if (cleanChannel === 'email' && !isMailConfigured()) {
-      return res.status(400).json({ error: 'SMTP no esta configurado para enviar emails' })
-    }
-
     if (cleanChannel === 'sms' && !isSmsConfigured()) {
       return res.status(400).json({ error: 'Twilio SMS no esta configurado' })
     }
 
-    const recipientQuery = cleanChannel === 'email'
-      ? `
-        SELECT id, name, email, phone
-        FROM customers
-        WHERE active = true
-          AND accepts_email = true
-          AND email IS NOT NULL
-          ${recipientIds.length > 0 ? 'AND id = ANY($1)' : ''}
-        ORDER BY name ASC
-      `
-      : `
-        SELECT id, name, email, phone
-        FROM customers
-        WHERE active = true
-          AND accepts_sms = true
-          AND phone IS NOT NULL
-          ${recipientIds.length > 0 ? 'AND id = ANY($1)' : ''}
-        ORDER BY name ASC
-      `
+    const recipientQuery = `
+      SELECT id, name, phone
+      FROM customers
+      WHERE active = true
+        AND accepts_sms = true
+        AND phone IS NOT NULL
+        ${recipientIds.length > 0 ? 'AND id = ANY($1)' : ''}
+      ORDER BY COALESCE(name, phone) ASC
+    `
 
     const recipientsResult = await query(
       recipientQuery,
@@ -302,27 +237,12 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
     }
 
     const results = await Promise.allSettled(
-      recipients.map((recipient) => {
-        if (cleanChannel === 'sms') {
-          return sendSms({
-            to: recipient.phone,
-            body: `${cleanTitle}\n\n${cleanMessage}`,
-          })
-        }
-
-        const mail = buildCampaignEmail({
-          customerName: recipient.name,
-          title: cleanTitle,
-          message: cleanMessage,
+      recipients.map((recipient) => (
+        sendSms({
+          to: recipient.phone,
+          body: `${cleanTitle}\n\n${cleanMessage}`,
         })
-
-        return sendEmail({
-          to: recipient.email,
-          subject: mail.subject,
-          html: mail.html,
-          text: mail.text,
-        })
-      })
+      ))
     )
 
     const sentCount = results.filter((result) => result.status === 'fulfilled').length
@@ -350,7 +270,6 @@ router.post('/campaigns/send', requireRole('admin'), async (req, res) => {
             .map(({ recipient, result }) => ({
               id: recipient.id,
               name: recipient.name,
-              email: recipient.email,
               phone: recipient.phone,
               error: result.reason?.message || 'Error al enviar',
             })),
