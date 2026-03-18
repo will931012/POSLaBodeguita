@@ -7,6 +7,8 @@ import { Toaster } from 'sonner'
 import LocationSelector from './pages/LocationSelector'
 import Login from './pages/Login'
 import SmsConsent from './pages/SmsConsent'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import SmsTerms from './pages/SmsTerms'
 
 // Layout components (no lazy - needed for all routes)
 import Layout from './components/Layout'
@@ -53,6 +55,8 @@ function AppRoutes() {
         }
       />
       <Route path="/sms-consent" element={<SmsConsent />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/sms-terms" element={<SmsTerms />} />
 
       {/* Protected layout */}
       <Route
