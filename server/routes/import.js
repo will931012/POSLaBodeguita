@@ -65,14 +65,27 @@ router.post('/products', upload.single('file'), async (req, res) => {
       for (const row of results) {
         try {
           await query(
-            `INSERT INTO products (upc, name, price, qty, category, location_id) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
+            `INSERT INTO products (
+               upc,
+               name,
+               price,
+               qty,
+               category,
+               perfume_size,
+               fragrance_type,
+               perfume_condition,
+               location_id
+             ) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [
               row.upc || null,
               row.name,
               parseFloat(row.price),
               parseInt(row.qty),
               row.category || null,
+              row.perfume_size || row.size || null,
+              row.fragrance_type || null,
+              row.perfume_condition || row.condition || null,
               locationId,
             ]
           )

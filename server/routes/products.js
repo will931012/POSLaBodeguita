@@ -8,6 +8,21 @@ const normalizeText = (value) => {
   return value.normalize('NFC')
 }
 
+const normalizeOptionalText = (value) => {
+  if (typeof value !== 'string') return value ?? null
+
+  const trimmed = value.trim()
+  return trimmed ? normalizeText(trimmed) : null
+}
+
+const serializeProduct = (row) => ({
+  ...row,
+  category: normalizeText(row.category),
+  perfume_size: normalizeText(row.perfume_size),
+  fragrance_type: normalizeText(row.fragrance_type),
+  perfume_condition: normalizeText(row.perfume_condition),
+})
+
 // ============================================
 // GET /api/products/categories - List distinct categories
 // ============================================
@@ -49,7 +64,14 @@ router.get('/', async (req, res) => {
     const params = [locationId]
 
     if (q) {
-      sql += ` AND (name ILIKE $${params.length + 1} OR upc ILIKE $${params.length + 1} OR category ILIKE $${params.length + 1})`
+      sql += ` AND (
+        name ILIKE $${params.length + 1}
+        OR upc ILIKE $${params.length + 1}
+        OR category ILIKE $${params.length + 1}
+        OR perfume_size ILIKE $${params.length + 1}
+        OR fragrance_type ILIKE $${params.length + 1}
+        OR perfume_condition ILIKE $${params.length + 1}
+      )`
       params.push(`%${q}%`)
     }
 
@@ -65,10 +87,7 @@ router.get('/', async (req, res) => {
 
     const result = await query(sql, params)
 
-    const normalizedRows = result.rows.map((row) => ({
-      ...row,
-      category: normalizeText(row.category),
-    }))
+    const normalizedRows = result.rows.map(serializeProduct)
 
     res.json({
       rows: normalizedRows,
@@ -87,24 +106,49 @@ router.get('/', async (req, res) => {
 // ============================================
 router.post('/', async (req, res) => {
   try {
-    const { upc, name, price, qty, category, shared } = req.body
+    const {
+      upc,
+      name,
+      price,
+      qty,
+      category,
+      perfume_size,
+      fragrance_type,
+      perfume_condition,
+    } = req.body
     
     // TODOS los productos son compartidos por defecto
     // location_id = NULL significa que todas las ubicaciones lo ven
     const locationId = null
     
     const result = await query(
-      `INSERT INTO products (upc, name, price, qty, category, location_id) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+      `INSERT INTO products (
+         upc,
+         name,
+         price,
+         qty,
+         category,
+         perfume_size,
+         fragrance_type,
+         perfume_condition,
+         location_id
+       ) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
        RETURNING *`,
-      [upc || null, name, price, qty, category || null, locationId]
+      [
+        upc || null,
+        name,
+        price,
+        qty,
+        normalizeOptionalText(category),
+        normalizeOptionalText(perfume_size),
+        normalizeOptionalText(fragrance_type),
+        normalizeOptionalText(perfume_condition),
+        locationId,
+      ]
     )
 
-    const created = result.rows[0]
-    res.json({
-      ...created,
-      category: normalizeText(created.category),
-    })
+    res.json(serializeProduct(result.rows[0]))
   } catch (error) {
     console.error('Product create error:', error)
     res.status(500).json({ error: error.message })
@@ -117,25 +161,48 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { upc, name, price, qty, category } = req.body
+    const {
+      upc,
+      name,
+      price,
+      qty,
+      category,
+      perfume_size,
+      fragrance_type,
+      perfume_condition,
+    } = req.body
 
     const result = await query(
       `UPDATE products 
-       SET upc = $1, name = $2, price = $3, qty = $4, category = $5, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6
+       SET upc = $1,
+           name = $2,
+           price = $3,
+           qty = $4,
+           category = $5,
+           perfume_size = $6,
+           fragrance_type = $7,
+           perfume_condition = $8,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $9
        RETURNING *`,
-      [upc || null, name, price, qty, category || null, id]
+      [
+        upc || null,
+        name,
+        price,
+        qty,
+        normalizeOptionalText(category),
+        normalizeOptionalText(perfume_size),
+        normalizeOptionalText(fragrance_type),
+        normalizeOptionalText(perfume_condition),
+        id,
+      ]
     )
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' })
     }
 
-    const updated = result.rows[0]
-    res.json({
-      ...updated,
-      category: normalizeText(updated.category),
-    })
+    res.json(serializeProduct(result.rows[0]))
   } catch (error) {
     console.error('Product update error:', error)
     res.status(500).json({ error: error.message })

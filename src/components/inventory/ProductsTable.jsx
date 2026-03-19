@@ -2,6 +2,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Package, Edit2, Trash2, Check, X } from 'lucide-react'
 import Card from '@components/Card'
 import Button from '@components/Button'
+import {
+  buildPerfumeDetails,
+  PERFUME_CONDITION_OPTIONS,
+  isPerfumeCategory,
+} from '@/utils/productMeta'
 
 export default function ProductsTable({
   products,
@@ -68,12 +73,44 @@ export default function ProductsTable({
                           />
                         </td>
                         <td className="p-4">
-                          <input
-                            type="text"
-                            value={editForm.name}
-                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                            className="w-full px-2 py-1 border rounded"
-                          />
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={editForm.name}
+                              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                              className="w-full px-2 py-1 border rounded"
+                            />
+                            {isPerfumeCategory(editForm.category) ? (
+                              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                                <input
+                                  type="text"
+                                  value={editForm.perfume_size}
+                                  onChange={(e) => setEditForm({ ...editForm, perfume_size: e.target.value })}
+                                  className="w-full px-2 py-1 border rounded text-sm"
+                                  placeholder="Size"
+                                />
+                                <input
+                                  type="text"
+                                  value={editForm.fragrance_type}
+                                  onChange={(e) => setEditForm({ ...editForm, fragrance_type: e.target.value })}
+                                  className="w-full px-2 py-1 border rounded text-sm"
+                                  placeholder="Fragrance Type"
+                                />
+                                <select
+                                  value={editForm.perfume_condition}
+                                  onChange={(e) => setEditForm({ ...editForm, perfume_condition: e.target.value })}
+                                  className="w-full px-2 py-1 border rounded text-sm"
+                                >
+                                  <option value="">Condition</option>
+                                  {PERFUME_CONDITION_OPTIONS.map((condition) => (
+                                    <option key={condition} value={condition}>
+                                      {condition}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="p-4">
                           <select
@@ -131,7 +168,21 @@ export default function ProductsTable({
                           {product.upc || <span className="text-gray-400">-</span>}
                         </td>
                         <td className="p-4 font-semibold">
-                          {product.name}
+                          <div>
+                            <div>{product.name}</div>
+                            {buildPerfumeDetails(product).length > 0 ? (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {buildPerfumeDetails(product).map((detail) => (
+                                  <span
+                                    key={`${product.id}-${detail}`}
+                                    className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800"
+                                  >
+                                    {detail}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="p-4">
                           {product.category ? (

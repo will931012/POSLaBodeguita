@@ -1,6 +1,7 @@
-upc,name,price,qty,category
-7501000000012,Cafe Molido 250g,6.50,24,Bebidas
-7501000000013,Arroz Premium 1kg,3.25,40,Alimentos
-7501000000014,Jabon de Bano,1.75,60,Higiene
-7501000000015,Refresco Cola 2L,2.10,18,Bebidas
-7501000000016,Galletas de Vainilla,1.99,35,Snacks
+upc,name,price,qty,category,perfume_size,fragrance_type,perfume_condition
+7501000000012,Cafe Molido 250g,6.50,24,Bebidas,,,
+7501000000013,Arroz Premium 1kg,3.25,40,Alimentos,,,
+7501000000014,Jabon de Bano,1.75,60,Higiene,,,
+7501000000015,Refresco Cola 2L,2.10,18,Bebidas,,,
+7501000000016,Galletas de Vainilla,1.99,35,Snacks,,,
+8411061990012,Light Blue Eau de Toilette 100ml,89.99,6,Perfumes,100 ml,Eau de Toilette,Original

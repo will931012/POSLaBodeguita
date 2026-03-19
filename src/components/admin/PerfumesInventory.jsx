@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Edit2, Search, Sparkles, X } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '@components/Card'
+import { PERFUME_CONDITION_OPTIONS } from '@/utils/productMeta'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -21,6 +22,9 @@ export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated
     upc: '',
     name: '',
     category: '',
+    perfume_size: '',
+    fragrance_type: '',
+    perfume_condition: '',
     price: '',
     qty: '',
   })
@@ -56,6 +60,9 @@ export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated
       upc: perfume.upc || '',
       name: perfume.name || '',
       category: perfume.category || '',
+      perfume_size: perfume.perfume_size || '',
+      fragrance_type: perfume.fragrance_type || '',
+      perfume_condition: perfume.perfume_condition || '',
       price: perfume.price ?? '',
       qty: perfume.qty ?? '',
     })
@@ -67,6 +74,9 @@ export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated
       upc: '',
       name: '',
       category: '',
+      perfume_size: '',
+      fragrance_type: '',
+      perfume_condition: '',
       price: '',
       qty: '',
     })
@@ -91,6 +101,9 @@ export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated
           upc: editForm.upc.trim() || null,
           name: editForm.name.trim(),
           category: editForm.category.trim() || null,
+          perfume_size: editForm.perfume_size.trim() || null,
+          fragrance_type: editForm.fragrance_type.trim() || null,
+          perfume_condition: editForm.perfume_condition.trim() || null,
           price: Number(editForm.price) || 0,
           qty: parseInt(editForm.qty, 10) || 0,
         }),
@@ -202,6 +215,9 @@ export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">UPC</th>
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Name</th>
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Categoria</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Size</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Fragrance Type</th>
+                  <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Condition</th>
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Precio</th>
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Stock</th>
                   <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Estado</th>
@@ -213,13 +229,13 @@ export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated
               <tbody>
                 {!hasActiveFilter ? (
                   <tr>
-                    <td colSpan="7" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
+                    <td colSpan="10" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
                       Escribe un valor en UPC o Name para mostrar productos.
                     </td>
                   </tr>
                 ) : filteredPerfumes.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
+                    <td colSpan="10" className="border border-slate-300 px-3 py-8 text-center text-slate-500">
                       No hay perfumes que coincidan con los filtros.
                     </td>
                   </tr>
@@ -255,6 +271,36 @@ export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated
                                 onChange={(event) => setEditForm({ ...editForm, category: event.target.value })}
                                 className="w-full rounded border border-slate-300 px-2 py-1"
                               />
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <input
+                                type="text"
+                                value={editForm.perfume_size}
+                                onChange={(event) => setEditForm({ ...editForm, perfume_size: event.target.value })}
+                                className="w-full rounded border border-slate-300 px-2 py-1"
+                              />
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <input
+                                type="text"
+                                value={editForm.fragrance_type}
+                                onChange={(event) => setEditForm({ ...editForm, fragrance_type: event.target.value })}
+                                className="w-full rounded border border-slate-300 px-2 py-1"
+                              />
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2">
+                              <select
+                                value={editForm.perfume_condition}
+                                onChange={(event) => setEditForm({ ...editForm, perfume_condition: event.target.value })}
+                                className="w-full rounded border border-slate-300 px-2 py-1"
+                              >
+                                <option value="">Seleccionar</option>
+                                {PERFUME_CONDITION_OPTIONS.map((condition) => (
+                                  <option key={condition} value={condition}>
+                                    {condition}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
                             <td className="border border-slate-300 px-3 py-2">
                               <input
@@ -307,6 +353,15 @@ export default function PerfumesInventory({ allPerfumes, token, onPerfumeUpdated
                             <td className="border border-slate-300 px-3 py-2 text-slate-800">{perfume.name}</td>
                             <td className="border border-slate-300 px-3 py-2 text-slate-800">
                               {perfume.category || <span className="text-slate-400">-</span>}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 text-slate-800">
+                              {perfume.perfume_size || <span className="text-slate-400">-</span>}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 text-slate-800">
+                              {perfume.fragrance_type || <span className="text-slate-400">-</span>}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 text-slate-800">
+                              {perfume.perfume_condition || <span className="text-slate-400">-</span>}
                             </td>
                             <td className="border border-slate-300 px-3 py-2 font-mono text-slate-800">
                               ${(Number(perfume.price) || 0).toFixed(2)}

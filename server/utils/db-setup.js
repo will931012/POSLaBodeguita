@@ -17,13 +17,30 @@ export default async function setupDatabase() {
         name TEXT NOT NULL,
         price NUMERIC(10,2) NOT NULL DEFAULT 0,
         qty INTEGER NOT NULL DEFAULT 0,
+        category TEXT,
+        perfume_size TEXT,
+        fragrance_type TEXT,
+        perfume_condition TEXT,
+        location_id INTEGER,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
+    await pool.query(`
+      ALTER TABLE products
+      ADD COLUMN IF NOT EXISTS category TEXT,
+      ADD COLUMN IF NOT EXISTS perfume_size TEXT,
+      ADD COLUMN IF NOT EXISTS fragrance_type TEXT,
+      ADD COLUMN IF NOT EXISTS perfume_condition TEXT,
+      ADD COLUMN IF NOT EXISTS location_id INTEGER;
+    `);
+
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_upc ON products(upc);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_perfume_size ON products(perfume_size);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_fragrance_type ON products(fragrance_type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_perfume_condition ON products(perfume_condition);`);
 
     /* =====================
        SALES

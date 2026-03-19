@@ -17,6 +17,7 @@ import AddProductForm from '@/components/inventory/AddProductForm'
 import ImportCSVForm from '@/components/inventory/ImportCSVForm'
 import SearchBar from '@/components/inventory/SearchBar'
 import ProductsTable from '@/components/inventory/ProductsTable'
+import { isPerfumeCategory } from '@/utils/productMeta'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const PAGE_SIZE = 50
@@ -43,7 +44,10 @@ export default function Inventory() {
     name: '', 
     price: 0, 
     qty: 0, 
-    category: '' 
+    category: '',
+    perfume_size: '',
+    fragrance_type: '',
+    perfume_condition: '',
   })
   
   // Add State
@@ -52,7 +56,10 @@ export default function Inventory() {
     name: '', 
     price: '', 
     qty: '', 
-    category: '' 
+    category: '',
+    perfume_size: '',
+    fragrance_type: '',
+    perfume_condition: '',
   })
   
   // Import State
@@ -243,23 +250,42 @@ export default function Inventory() {
       price: product.price,
       qty: product.qty,
       category: product.category || '',
+      perfume_size: product.perfume_size || '',
+      fragrance_type: product.fragrance_type || '',
+      perfume_condition: product.perfume_condition || '',
     })
   }
 
   const cancelEdit = () => {
     setEditingId(null)
-    setEditForm({ upc: '', name: '', price: 0, qty: 0, category: '' })
+    setEditForm({
+      upc: '',
+      name: '',
+      price: 0,
+      qty: 0,
+      category: '',
+      perfume_size: '',
+      fragrance_type: '',
+      perfume_condition: '',
+    })
   }
 
   const saveEdit = async (id) => {
     try {
+      const payload = {
+        ...editForm,
+        perfume_size: isPerfumeCategory(editForm.category) ? editForm.perfume_size : null,
+        fragrance_type: isPerfumeCategory(editForm.category) ? editForm.fragrance_type : null,
+        perfume_condition: isPerfumeCategory(editForm.category) ? editForm.perfume_condition : null,
+      }
+
       const res = await fetch(`${API}/api/products/${id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) throw new Error('Failed to update')
@@ -322,6 +348,18 @@ export default function Inventory() {
         }
       }
 
+      const perfumeFields = isPerfumeCategory(addForm.category)
+        ? {
+            perfume_size: addForm.perfume_size || null,
+            fragrance_type: addForm.fragrance_type || null,
+            perfume_condition: addForm.perfume_condition || null,
+          }
+        : {
+            perfume_size: null,
+            fragrance_type: null,
+            perfume_condition: null,
+          }
+
       const res = await fetch(`${API}/api/products`, {
         method: 'POST',
         headers: {
@@ -334,6 +372,7 @@ export default function Inventory() {
           price: parseFloat(addForm.price),
           qty: parseInt(addForm.qty) || 0,
           category: addForm.category || null,
+          ...perfumeFields,
         }),
       })
 
@@ -342,7 +381,16 @@ export default function Inventory() {
       const newProduct = await res.json()
       setProducts([newProduct, ...products])
       setTotal(total + 1)
-      setAddForm({ upc: '', name: '', price: '', qty: '', category: '' })
+      setAddForm({
+        upc: '',
+        name: '',
+        price: '',
+        qty: '',
+        category: '',
+        perfume_size: '',
+        fragrance_type: '',
+        perfume_condition: '',
+      })
       setMode('search')
       loadCategories()
       toast.success('Producto creado')
@@ -395,8 +443,17 @@ export default function Inventory() {
 
   const exportProducts = () => {
     const csv = [
-      ['upc', 'name', 'category', 'price', 'qty'],
-      ...products.map(p => [p.upc || '', p.name, p.category || '', p.price, p.qty])
+      ['upc', 'name', 'category', 'perfume_size', 'fragrance_type', 'perfume_condition', 'price', 'qty'],
+      ...products.map(p => [
+        p.upc || '',
+        p.name,
+        p.category || '',
+        p.perfume_size || '',
+        p.fragrance_type || '',
+        p.perfume_condition || '',
+        p.price,
+        p.qty,
+      ])
     ].map(row => row.join(',')).join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv' })
