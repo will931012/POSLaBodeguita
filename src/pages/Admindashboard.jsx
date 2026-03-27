@@ -465,7 +465,7 @@ export default function AdminDashboard() {
 
             {activeTab === 'perfumes' && (
               <div className="space-y-6">
-                <div className="max-w-3xl">
+                <div>
                   <PerfumeSalesSection perfumeProducts={perfumeProducts} />
                 </div>
                 <PerfumesInventory

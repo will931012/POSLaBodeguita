@@ -73,10 +73,16 @@ router.get('/perfume-sales', async (req, res) => {
         p.name,
         p.upc,
         p.category,
+        p.perfume_size,
+        p.fragrance_type,
+        p.perfume_condition,
+        p.price as list_price,
         COUNT(DISTINCT s.id) as sales_count,
         SUM(si.qty) as units_sold,
         SUM(si.qty * si.price) as revenue,
         AVG(si.price) as avg_price,
+        MAX(si.price) as last_sale_price,
+        MAX(s.created_at) as last_sold_at,
         p.qty as current_stock
       FROM sales s
       JOIN sale_items si ON s.id = si.sale_id
@@ -96,7 +102,16 @@ router.get('/perfume-sales', async (req, res) => {
     }
 
     sql += `
-      GROUP BY p.id, p.name, p.upc, p.category, p.qty
+      GROUP BY
+        p.id,
+        p.name,
+        p.upc,
+        p.category,
+        p.perfume_size,
+        p.fragrance_type,
+        p.perfume_condition,
+        p.price,
+        p.qty
       ORDER BY revenue DESC
     `
 
