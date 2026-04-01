@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Save } from 'lucide-react'
+import { History, PauseCircle, Save } from 'lucide-react'
 import Button from '@components/Button'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
@@ -14,6 +14,8 @@ import TicketModal from '@/components/caja/TicketModal'
 import CustomerQuickRegister from '@/components/caja/CustomerQuickRegister'
 import SavePhonePromptModal from '@/components/caja/SavePhonePromptModal'
 import ScanErrorModal from '@/components/caja/ScanErrorModal'
+import SalesHistoryModal from '@/components/caja/SalesHistoryModal'
+import ParkedCartsModal, { loadParkedCarts, saveParkedCarts } from '@/components/caja/ParkedCartsModal'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const CART_STORAGE_KEY = 'pos_active_sale'
@@ -59,6 +61,8 @@ export default function Caja() {
   const [customerShortcutSignal, setCustomerShortcutSignal] = useState(0)
   const [scanErrorMessage, setScanErrorMessage] = useState('')
   const [showScanErrorModal, setShowScanErrorModal] = useState(false)
+  const [showSalesHistory, setShowSalesHistory] = useState(false)
+  const [showParkedCarts, setShowParkedCarts] = useState(false)
   
   // Refs
   const searchTimerRef = useRef(null)
@@ -399,6 +403,39 @@ export default function Caja() {
     setDiscountPercent(0)
     localStorage.removeItem(CART_STORAGE_KEY)
     toast.info('Carrito vaciado')
+  }
+
+  const parkCurrentCart = () => {
+    const existing = loadParkedCarts()
+    const parked = {
+      id: Date.now(),
+      timestamp: Date.now(),
+      cart,
+      products,
+      tempProducts,
+      discountPercent,
+      paymentMethod,
+    }
+    saveParkedCarts([parked, ...existing])
+    setCart({})
+    setProducts([])
+    setTempProducts([])
+    setPaymentMethod('card')
+    setCashReceived('')
+    setDiscountPercent(0)
+    localStorage.removeItem(CART_STORAGE_KEY)
+    toast.success('Venta guardada y pausada')
+  }
+
+  const restoreParkedCart = (parked) => {
+    setCart(parked.cart || {})
+    setProducts(parked.products || [])
+    setTempProducts(parked.tempProducts || [])
+    setDiscountPercent(parked.discountPercent || 0)
+    setPaymentMethod(parked.paymentMethod || 'card')
+    const remaining = loadParkedCarts().filter((c) => c.id !== parked.id)
+    saveParkedCarts(remaining)
+    toast.success('Venta retomada')
   }
 
   const addTempProduct = (e) => {
@@ -745,6 +782,22 @@ export default function Caja() {
                 onSubmit={addTempProduct}
                 shortcutSignal={tempShortcutSignal}
               />
+              <Button
+                type="button"
+                variant="outline"
+                icon={History}
+                onClick={() => setShowSalesHistory(true)}
+              >
+                Ventas
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                icon={PauseCircle}
+                onClick={() => setShowParkedCarts(true)}
+              >
+                Pausadas
+              </Button>
               <CustomerQuickRegister
                 token={token}
                 shortcutSignal={customerShortcutSignal}
@@ -812,6 +865,18 @@ export default function Caja() {
           setScanErrorMessage('')
           searchInputRef.current?.focus()
         }}
+      />
+      <SalesHistoryModal
+        open={showSalesHistory}
+        onClose={() => setShowSalesHistory(false)}
+        token={token}
+      />
+      <ParkedCartsModal
+        open={showParkedCarts}
+        onClose={() => setShowParkedCarts(false)}
+        onRestore={restoreParkedCart}
+        onParkCurrent={parkCurrentCart}
+        hasActiveCart={Object.keys(cart).length > 0}
       />
     </>
   )

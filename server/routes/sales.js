@@ -23,6 +23,34 @@ router.get('/today', async (req, res) => {
   }
 })
 
+router.get('/', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT s.id, s.total, s.payment_method, s.cash_received, s.change_due, s.created_at,
+        json_agg(
+          json_build_object(
+            'name', COALESCE(p.name, 'Producto temporal'),
+            'qty', si.qty,
+            'price', si.price
+          ) ORDER BY si.id
+        ) AS items
+      FROM sales s
+      LEFT JOIN sale_items si ON si.sale_id = s.id
+      LEFT JOIN products p ON p.id = si.product_id
+      WHERE DATE(s.created_at) = CURRENT_DATE
+        AND s.location_id = $1
+      GROUP BY s.id
+      ORDER BY s.created_at DESC
+      LIMIT 100
+    `, [req.location.id])
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error('Sales list error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 router.post('/', async (req, res) => {
   try {
     const { items = [], payment = {}, override_total } = req.body
