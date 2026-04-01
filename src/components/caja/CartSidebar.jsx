@@ -47,7 +47,7 @@ export default function CartSidebar({
         <div className="space-y-4">
           <div className="space-y-2 max-h-96 overflow-y-auto">
             <AnimatePresence>
-              {Object.entries(cart).map(([productId, qty]) => {
+              {Object.entries(cart).map(([productId, qty], index) => {
                 const product = allProducts.find(p => p.id === parseInt(productId))
                 if (!product) return null
 
@@ -63,7 +63,8 @@ export default function CartSidebar({
                     className="bg-gray-50 rounded-xl p-4"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
+                      <div className="flex items-start gap-2 flex-1">
+                        <span className="text-sm font-bold text-gray-400 mt-0.5 min-w-[1.25rem]">{index + 1})</span>
                         <div className="font-semibold">{product.name}</div>
                       </div>
                       <button

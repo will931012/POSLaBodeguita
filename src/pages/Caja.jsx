@@ -199,15 +199,41 @@ export default function Caja() {
         return
       }
 
-      if (
-        event.key === 'Enter'
-        && !isEditableTarget(event.target)
-        && !showTicketModal
-        && !showSavePhonePrompt
-        && !showCustomerRegisterModal
-      ) {
-        event.preventDefault()
-        completeSale()
+      const inModal = showTicketModal || showSavePhonePrompt || showCustomerRegisterModal
+      const inEditable = isEditableTarget(event.target)
+
+      // If typing outside an input and no modal open, redirect to scanner
+      if (!inEditable && !inModal) {
+        if (event.key === 'Enter') {
+          // Enter outside input with no pending search = complete sale
+          event.preventDefault()
+          completeSale()
+          return
+        }
+
+        // Printable character typed outside input → hijack to search field
+        if (event.key.length === 1) {
+          event.preventDefault()
+          setSearchQuery((prev) => prev + event.key)
+          searchInputRef.current?.focus()
+          return
+        }
+
+        // Backspace outside input → erase last char in search
+        if (event.key === 'Backspace') {
+          event.preventDefault()
+          setSearchQuery((prev) => prev.slice(0, -1))
+          searchInputRef.current?.focus()
+          return
+        }
+
+        // Escape outside input → clear search
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          setSearchQuery('')
+          setSearchResults([])
+          return
+        }
       }
     }
 
