@@ -47,8 +47,8 @@ export default function ProductLabel() {
   const barcodeSupported = upc ? canRenderBarcode(upc) : false
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="mx-auto max-w-4xl space-y-6 print:max-w-none print:space-y-0">
+      <div className="flex flex-col gap-4 print:hidden md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-4xl font-bold text-gradient">Etiqueta de Producto</h1>
           <p className="mt-2 text-gray-600">Genera una imagen imprimible del UPC del producto.</p>
@@ -58,31 +58,31 @@ export default function ProductLabel() {
         </Button>
       </div>
 
-      <Card title="Vista previa">
+      <Card
+        title="Vista previa"
+        headerClassName="print:hidden"
+        className="print:border-0 print:shadow-none"
+        bodyClassName="print:p-0"
+      >
         {loading ? (
           <div className="py-16 text-center text-gray-500">Cargando etiqueta...</div>
         ) : error ? (
           <div className="py-16 text-center text-red-600">{error}</div>
         ) : (
-          <div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm print:border-0 print:shadow-none">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none">
             <div className="space-y-3 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500 print:hidden">
                 Etiqueta UPC
               </p>
               <h2 className="text-3xl font-bold text-slate-900">{product?.name || 'Producto'}</h2>
-              <div className="flex items-center justify-center gap-3 text-sm text-slate-600">
-                <span>{product?.category || 'Sin categoria'}</span>
-                <span>&bull;</span>
-                <span>${Number(product?.price || 0).toFixed(2)}</span>
-              </div>
             </div>
 
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 print:mt-6 print:rounded-none print:border-0 print:bg-white print:p-0">
               {upc ? (
                 barcodeSupported && barcodeSvg ? (
                   <div className="space-y-3">
                     <div
-                      className="mx-auto h-32 w-full max-w-xl bg-white p-3"
+                      className="mx-auto h-32 w-full max-w-xl bg-white p-3 print:h-28 print:max-w-none print:p-0"
                       dangerouslySetInnerHTML={{ __html: barcodeSvg }}
                     />
                     <p className="text-center font-mono text-2xl tracking-[0.28em] text-slate-900">
