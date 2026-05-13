@@ -28,6 +28,14 @@ export default async function setupDatabase() {
     `);
 
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS product_categories (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
       ALTER TABLE products
       ADD COLUMN IF NOT EXISTS category TEXT,
       ADD COLUMN IF NOT EXISTS perfume_size TEXT,
@@ -38,9 +46,18 @@ export default async function setupDatabase() {
 
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_upc ON products(upc);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_product_categories_name ON product_categories(name);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_perfume_size ON products(perfume_size);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_fragrance_type ON products(fragrance_type);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_perfume_condition ON products(perfume_condition);`);
+    await pool.query(
+      `
+      INSERT INTO product_categories (name)
+      VALUES ($1)
+      ON CONFLICT (name) DO NOTHING;
+      `,
+      ['Sublimation Product']
+    );
 
     /* =====================
        SALES

@@ -58,6 +58,15 @@ async function initDatabase() {
       console.log('âœ… Products table ready')
 
       await query(`
+        CREATE TABLE IF NOT EXISTS product_categories (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(120) UNIQUE NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `)
+      console.log('âœ… Product categories table ready')
+
+      await query(`
         ALTER TABLE products
         ADD COLUMN IF NOT EXISTS category VARCHAR(120),
         ADD COLUMN IF NOT EXISTS perfume_size VARCHAR(80),
@@ -180,6 +189,7 @@ async function initDatabase() {
       await query(`
         CREATE INDEX IF NOT EXISTS idx_products_upc ON products(upc);
         CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
+        CREATE INDEX IF NOT EXISTS idx_product_categories_name ON product_categories(name);
         CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
         CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
         CREATE INDEX IF NOT EXISTS idx_receipts_sale_id ON receipts(sale_id);
@@ -194,6 +204,14 @@ async function initDatabase() {
         CREATE INDEX IF NOT EXISTS idx_products_perfume_condition ON products(perfume_condition);
       `)
       console.log('âœ… Indexes created')
+
+      await query(
+        `INSERT INTO product_categories (name)
+         VALUES ($1)
+         ON CONFLICT (name) DO NOTHING`,
+        ['Sublimation Product']
+      )
+      console.log('âœ… Default product categories ready')
 
       // Seed initial data if empty
       const { rows } = await query('SELECT COUNT(*) FROM products')

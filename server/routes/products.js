@@ -1,5 +1,6 @@
 const express = require('express')
 const { query, transaction } = require('../config/database')
+const { ensureProductCategory } = require('../utils/productCategories')
 const { resolveProductUpc } = require('../utils/productUpc')
 
 const router = express.Router()
@@ -29,18 +30,17 @@ const serializeProduct = (row) => ({
 // ============================================
 router.get('/categories', async (req, res) => {
   try {
-    const locationId = req.location.id
-
     const result = await query(
       `
+        SELECT name AS category
+        FROM product_categories
+        UNION
         SELECT DISTINCT category
         FROM products
         WHERE category IS NOT NULL
           AND category <> ''
-          AND (location_id = $1 OR location_id IS NULL)
         ORDER BY category ASC
-      `,
-      [locationId]
+      `
     )
 
     res.json(result.rows.map(row => normalizeText(row.category)))
@@ -121,9 +121,11 @@ router.post('/', async (req, res) => {
     // TODOS los productos son compartidos por defecto
     // location_id = NULL significa que todas las ubicaciones lo ven
     const locationId = null
+    const normalizedCategory = normalizeOptionalText(category)
     
     const result = await transaction(async (client) => {
       const resolvedUpc = await resolveProductUpc(client, upc)
+      await ensureProductCategory(client, normalizedCategory)
 
       return client.query(
         `INSERT INTO products (
@@ -144,7 +146,7 @@ router.post('/', async (req, res) => {
           name,
           price,
           qty,
-          normalizeOptionalText(category),
+          normalizedCategory,
           normalizeOptionalText(perfume_size),
           normalizeOptionalText(fragrance_type),
           normalizeOptionalText(perfume_condition),
@@ -176,32 +178,37 @@ router.put('/:id', async (req, res) => {
       fragrance_type,
       perfume_condition,
     } = req.body
+    const normalizedCategory = normalizeOptionalText(category)
 
-    const result = await query(
-      `UPDATE products 
-       SET upc = $1,
-           name = $2,
-           price = $3,
-           qty = $4,
-           category = $5,
-           perfume_size = $6,
-           fragrance_type = $7,
-           perfume_condition = $8,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9
-       RETURNING *`,
-      [
-        upc || null,
-        name,
-        price,
-        qty,
-        normalizeOptionalText(category),
-        normalizeOptionalText(perfume_size),
-        normalizeOptionalText(fragrance_type),
-        normalizeOptionalText(perfume_condition),
-        id,
-      ]
-    )
+    const result = await transaction(async (client) => {
+      await ensureProductCategory(client, normalizedCategory)
+
+      return client.query(
+        `UPDATE products 
+         SET upc = $1,
+             name = $2,
+             price = $3,
+             qty = $4,
+             category = $5,
+             perfume_size = $6,
+             fragrance_type = $7,
+             perfume_condition = $8,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $9
+         RETURNING *`,
+        [
+          upc || null,
+          name,
+          price,
+          qty,
+          normalizedCategory,
+          normalizeOptionalText(perfume_size),
+          normalizeOptionalText(fragrance_type),
+          normalizeOptionalText(perfume_condition),
+          id,
+        ]
+      )
+    })
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' })

@@ -4,6 +4,7 @@ const csv = require('csv-parser')
 const { Readable } = require('stream')
 const XLSX = require('xlsx')
 const { query, transaction } = require('../config/database')
+const { ensureProductCategory, normalizeCategoryName } = require('../utils/productCategories')
 const { resolveProductUpc } = require('../utils/productUpc')
 
 const router = express.Router()
@@ -67,6 +68,8 @@ router.post('/products', upload.single('file'), async (req, res) => {
         try {
           await transaction(async (client) => {
             const resolvedUpc = await resolveProductUpc(client, row.upc)
+            const normalizedCategory = normalizeCategoryName(row.category)
+            await ensureProductCategory(client, normalizedCategory)
 
             await client.query(
               `INSERT INTO products (
@@ -86,7 +89,7 @@ router.post('/products', upload.single('file'), async (req, res) => {
                 row.name,
                 parseFloat(row.price),
                 parseInt(row.qty),
-                row.category || null,
+                normalizedCategory,
                 row.perfume_size || row.size || null,
                 row.fragrance_type || null,
                 row.perfume_condition || row.condition || null,
