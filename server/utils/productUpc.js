@@ -1,5 +1,6 @@
 const AUTO_UPC_START = 1200000001n
 const AUTO_UPC_LOCK_KEY = 1200000001
+const POSTGRES_BIGINT_MAX = '9223372036854775807'
 
 const normalizeProvidedUpc = (value) => {
   if (typeof value !== 'string') return value ?? null
@@ -16,8 +17,12 @@ const generateNextUpc = async (client) => {
      FROM products
      WHERE upc IS NOT NULL
        AND upc ~ '^[0-9]+$'
+       AND (
+         LENGTH(upc) < 19
+         OR (LENGTH(upc) = 19 AND upc <= $2)
+       )
        AND CAST(upc AS BIGINT) >= $1`,
-    [AUTO_UPC_START.toString()]
+    [AUTO_UPC_START.toString(), POSTGRES_BIGINT_MAX]
   )
 
   const currentMax = rows[0]?.max_upc ? BigInt(rows[0].max_upc) : AUTO_UPC_START - 1n
