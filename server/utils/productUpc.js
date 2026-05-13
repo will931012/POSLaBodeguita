@@ -13,16 +13,22 @@ const generateNextUpc = async (client) => {
   await client.query('SELECT pg_advisory_xact_lock($1)', [AUTO_UPC_LOCK_KEY])
 
   const { rows } = await client.query(
-    `SELECT MAX(CAST(upc AS BIGINT)) AS max_upc
-     FROM products
-     WHERE upc IS NOT NULL
-       AND upc ~ '^[0-9]+$'
-       AND (
-         LENGTH(upc) < 19
-         OR (LENGTH(upc) = 19 AND upc <= $2)
-       )
-       AND CAST(upc AS BIGINT) >= $1`,
-    [AUTO_UPC_START.toString(), POSTGRES_BIGINT_MAX]
+    `SELECT MAX(candidate_upc) AS max_upc
+     FROM (
+       SELECT CASE
+         WHEN upc IS NOT NULL
+           AND upc ~ '^[0-9]+$'
+           AND (
+             LENGTH(upc) < 19
+             OR (LENGTH(upc) = 19 AND upc <= $1)
+           )
+         THEN CAST(upc AS BIGINT)
+         ELSE NULL
+       END AS candidate_upc
+       FROM products
+     ) upc_candidates
+     WHERE candidate_upc >= $2`,
+    [POSTGRES_BIGINT_MAX, AUTO_UPC_START.toString()]
   )
 
   const currentMax = rows[0]?.max_upc ? BigInt(rows[0].max_upc) : AUTO_UPC_START - 1n
