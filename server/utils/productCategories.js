@@ -1,5 +1,5 @@
 const DEFAULT_PRODUCT_CATEGORIES = [
-  'Sublimation Product',
+  'Sublimation Products',
 ]
 
 const normalizeCategoryName = (value) => {

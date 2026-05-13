@@ -17,6 +17,7 @@ import AddProductForm from '@/components/inventory/AddProductForm'
 import ImportCSVForm from '@/components/inventory/ImportCSVForm'
 import SearchBar from '@/components/inventory/SearchBar'
 import ProductsTable from '@/components/inventory/ProductsTable'
+import { mergeProductCategories } from '@/utils/productCategories'
 import { isPerfumeCategory } from '@/utils/productMeta'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -169,9 +170,10 @@ export default function Inventory() {
       })
       if (!res.ok) throw new Error('Failed to load categories')
       const data = await res.json()
-      setCategories(Array.isArray(data) ? data : [])
+      setCategories(mergeProductCategories(Array.isArray(data) ? data : []))
     } catch (error) {
       console.error('Categories load error:', error)
+      setCategories(mergeProductCategories())
     }
   }
 

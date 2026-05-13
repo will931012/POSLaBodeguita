@@ -56,7 +56,7 @@ export default async function setupDatabase() {
       VALUES ($1)
       ON CONFLICT (name) DO NOTHING;
       `,
-      ['Sublimation Product']
+      ['Sublimation Products']
     );
 
     /* =====================

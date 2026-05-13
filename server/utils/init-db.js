@@ -209,7 +209,7 @@ async function initDatabase() {
         `INSERT INTO product_categories (name)
          VALUES ($1)
          ON CONFLICT (name) DO NOTHING`,
-        ['Sublimation Product']
+        ['Sublimation Products']
       )
       console.log('âœ… Default product categories ready')
 
