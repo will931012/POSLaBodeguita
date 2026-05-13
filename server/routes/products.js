@@ -103,6 +103,36 @@ router.get('/', async (req, res) => {
 })
 
 // ============================================
+// GET /api/products/:id - Get product by id
+// ============================================
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const locationId = req.location.id
+
+    const result = await query(
+      `
+        SELECT *
+        FROM products
+        WHERE id = $1
+          AND (location_id = $2 OR location_id IS NULL)
+        LIMIT 1
+      `,
+      [id, locationId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' })
+    }
+
+    res.json(serializeProduct(result.rows[0]))
+  } catch (error) {
+    console.error('Product fetch by id error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// ============================================
 // POST /api/products - Create product
 // ============================================
 router.post('/', async (req, res) => {

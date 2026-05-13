@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Package, Edit2, Trash2, Check, X } from 'lucide-react'
 import Card from '@components/Card'
 import Button from '@components/Button'
+import ProductBarcodeButton from '@/components/inventory/ProductBarcodeButton'
 import {
   buildPerfumeDetails,
   PERFUME_CONDITION_OPTIONS,
@@ -209,6 +210,7 @@ export default function ProductsTable({
                         </td>
                         <td className="p-4">
                           <div className="flex gap-1">
+                            <ProductBarcodeButton productId={product.id} />
                             <button
                               onClick={() => onStartEdit(product)}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
