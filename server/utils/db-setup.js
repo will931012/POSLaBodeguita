@@ -59,6 +59,23 @@ export default async function setupDatabase() {
       ['Sublimation Products']
     );
 
+    await pool.query(
+      `
+      UPDATE products
+      SET category = $1
+      WHERE category = $2;
+      `,
+      ['Sublimation Products', 'Sublimation Product']
+    );
+
+    await pool.query(
+      `
+      DELETE FROM product_categories
+      WHERE name = $1;
+      `,
+      ['Sublimation Product']
+    );
+
     /* =====================
        SALES
     ===================== */

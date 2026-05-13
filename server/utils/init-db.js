@@ -213,6 +213,20 @@ async function initDatabase() {
       )
       console.log('âœ… Default product categories ready')
 
+      await query(
+        `UPDATE products
+         SET category = $1
+         WHERE category = $2`,
+        ['Sublimation Products', 'Sublimation Product']
+      )
+
+      await query(
+        `DELETE FROM product_categories
+         WHERE name = $1`,
+        ['Sublimation Product']
+      )
+      console.log('âœ… Sublimation category normalized')
+
       // Seed initial data if empty
       const { rows } = await query('SELECT COUNT(*) FROM products')
       const count = parseInt(rows[0].count)
