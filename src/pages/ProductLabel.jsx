@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Printer, ScanLine, TriangleAlert } from 'lucide-react'
+import { Printer, ScanLine, AlertTriangle } from 'lucide-react'
 import Card from '@components/Card'
 import Button from '@components/Button'
 import { useAuth } from '@/context/AuthContext'
@@ -91,7 +91,7 @@ export default function ProductLabel() {
                   </div>
                 ) : (
                   <div className="space-y-3 text-center">
-                    <TriangleAlert className="mx-auto h-8 w-8 text-amber-500" />
+                    <AlertTriangle className="mx-auto h-8 w-8 text-amber-500" />
                     <p className="text-sm text-slate-700">
                       Este UPC contiene caracteres que esta etiqueta no puede renderizar todavia.
                     </p>
