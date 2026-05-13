@@ -1,5 +1,6 @@
 const express = require('express')
-const { query } = require('../config/database')
+const { query, transaction } = require('../config/database')
+const { resolveProductUpc } = require('../utils/productUpc')
 
 const router = express.Router()
 
@@ -121,32 +122,36 @@ router.post('/', async (req, res) => {
     // location_id = NULL significa que todas las ubicaciones lo ven
     const locationId = null
     
-    const result = await query(
-      `INSERT INTO products (
-         upc,
-         name,
-         price,
-         qty,
-         category,
-         perfume_size,
-         fragrance_type,
-         perfume_condition,
-         location_id
-       ) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-       RETURNING *`,
-      [
-        upc || null,
-        name,
-        price,
-        qty,
-        normalizeOptionalText(category),
-        normalizeOptionalText(perfume_size),
-        normalizeOptionalText(fragrance_type),
-        normalizeOptionalText(perfume_condition),
-        locationId,
-      ]
-    )
+    const result = await transaction(async (client) => {
+      const resolvedUpc = await resolveProductUpc(client, upc)
+
+      return client.query(
+        `INSERT INTO products (
+           upc,
+           name,
+           price,
+           qty,
+           category,
+           perfume_size,
+           fragrance_type,
+           perfume_condition,
+           location_id
+         ) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+         RETURNING *`,
+        [
+          resolvedUpc,
+          name,
+          price,
+          qty,
+          normalizeOptionalText(category),
+          normalizeOptionalText(perfume_size),
+          normalizeOptionalText(fragrance_type),
+          normalizeOptionalText(perfume_condition),
+          locationId,
+        ]
+      )
+    })
 
     res.json(serializeProduct(result.rows[0]))
   } catch (error) {

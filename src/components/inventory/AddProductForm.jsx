@@ -19,7 +19,7 @@ export default function AddProductForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             label="UPC (Código de Barras)"
-            placeholder="123456789"
+            placeholder="Dejar vacio para autogenerar"
             value={addForm.upc}
             onChange={(e) => setAddForm({ ...addForm, upc: e.target.value })}
           />

@@ -3,7 +3,8 @@ const multer = require('multer')
 const csv = require('csv-parser')
 const { Readable } = require('stream')
 const XLSX = require('xlsx')
-const { query } = require('../config/database')
+const { query, transaction } = require('../config/database')
+const { resolveProductUpc } = require('../utils/productUpc')
 
 const router = express.Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -64,31 +65,35 @@ router.post('/products', upload.single('file'), async (req, res) => {
     if (!dryRun) {
       for (const row of results) {
         try {
-          await query(
-            `INSERT INTO products (
-               upc,
-               name,
-               price,
-               qty,
-               category,
-               perfume_size,
-               fragrance_type,
-               perfume_condition,
-               location_id
-             ) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-            [
-              row.upc || null,
-              row.name,
-              parseFloat(row.price),
-              parseInt(row.qty),
-              row.category || null,
-              row.perfume_size || row.size || null,
-              row.fragrance_type || null,
-              row.perfume_condition || row.condition || null,
-              locationId,
-            ]
-          )
+          await transaction(async (client) => {
+            const resolvedUpc = await resolveProductUpc(client, row.upc)
+
+            await client.query(
+              `INSERT INTO products (
+                 upc,
+                 name,
+                 price,
+                 qty,
+                 category,
+                 perfume_size,
+                 fragrance_type,
+                 perfume_condition,
+                 location_id
+               ) 
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              [
+                resolvedUpc,
+                row.name,
+                parseFloat(row.price),
+                parseInt(row.qty),
+                row.category || null,
+                row.perfume_size || row.size || null,
+                row.fragrance_type || null,
+                row.perfume_condition || row.condition || null,
+                locationId,
+              ]
+            )
+          })
         } catch (error) {
           errors.push({ row, error: error.message })
         }
