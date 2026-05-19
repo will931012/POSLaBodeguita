@@ -2,6 +2,8 @@ const express = require('express')
 const { query } = require('../config/database')
 
 const router = express.Router()
+const PERFUME_CATEGORY_MATCH = `(p.category ILIKE '%perfume%' OR p.category ILIKE '%fragancia%')`
+const SUBLIMATION_CATEGORY_MATCH = `(p.category ILIKE '%sublimation%' OR p.category ILIKE '%sublimacion%')`
 
 // Middleware to check if user is admin
 const requireAdmin = (req, res, next) => {
@@ -88,7 +90,7 @@ router.get('/perfume-sales', async (req, res) => {
       JOIN sale_items si ON s.id = si.sale_id
       JOIN products p ON si.product_id = p.id
       WHERE ${clause}
-        AND (p.category ILIKE '%perfume%' OR p.category ILIKE '%fragancia%')
+        AND ${PERFUME_CATEGORY_MATCH}
     `
 
     if (startDate) {
@@ -119,6 +121,64 @@ router.get('/perfume-sales', async (req, res) => {
     res.json(result.rows)
   } catch (error) {
     console.error('Perfume sales error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// ============================================
+// GET /api/analytics/sublimation-sales
+// ============================================
+router.get('/sublimation-sales', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query
+    const { clause, params } = buildNoFilter()
+
+    let sql = `
+      SELECT
+        p.id,
+        p.name,
+        p.upc,
+        p.category,
+        p.price as list_price,
+        COUNT(DISTINCT s.id) as sales_count,
+        SUM(si.qty) as units_sold,
+        SUM(si.qty * si.price) as revenue,
+        AVG(si.price) as avg_price,
+        MAX(si.price) as last_sale_price,
+        MAX(s.created_at) as last_sold_at,
+        p.qty as current_stock
+      FROM sales s
+      JOIN sale_items si ON s.id = si.sale_id
+      JOIN products p ON si.product_id = p.id
+      WHERE ${clause}
+        AND ${SUBLIMATION_CATEGORY_MATCH}
+    `
+
+    if (startDate) {
+      sql += ` AND s.created_at >= $${params.length + 1}`
+      params.push(startDate)
+    }
+
+    if (endDate) {
+      sql += ` AND s.created_at <= $${params.length + 1}`
+      params.push(endDate)
+    }
+
+    sql += `
+      GROUP BY
+        p.id,
+        p.name,
+        p.upc,
+        p.category,
+        p.price,
+        p.qty
+      ORDER BY revenue DESC
+    `
+
+    const result = await query(sql, params)
+    res.json(result.rows)
+  } catch (error) {
+    console.error('Sublimation sales error:', error)
     res.status(500).json({ error: error.message })
   }
 })
@@ -261,7 +321,7 @@ router.get('/dashboard-summary', async (req, res) => {
       JOIN sale_items si ON s.id = si.sale_id
       JOIN products p ON si.product_id = p.id
       WHERE ${salesFilter.clause}
-        AND (p.category ILIKE '%perfume%' OR p.category ILIKE '%fragancia%')
+        AND ${PERFUME_CATEGORY_MATCH}
       ${perfumeSalesDateFilter}
     `
 
@@ -335,11 +395,11 @@ router.get('/location-breakdown', async (req, res) => {
         SELECT
           l.id,
           COUNT(DISTINCT fs.id) FILTER (
-            WHERE p.category ILIKE '%perfume%' OR p.category ILIKE '%fragancia%'
+            WHERE ${PERFUME_CATEGORY_MATCH}
           ) as perfume_sales,
           COALESCE(SUM(
             CASE
-              WHEN p.category ILIKE '%perfume%' OR p.category ILIKE '%fragancia%'
+              WHEN ${PERFUME_CATEGORY_MATCH}
               THEN si.qty * si.price
               ELSE 0
             END

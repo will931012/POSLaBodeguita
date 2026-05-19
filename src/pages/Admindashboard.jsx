@@ -15,14 +15,17 @@ import { Navigate } from 'react-router-dom'
 import StatCard from '@/components/admin/StatCard.jsx'
 import TodaySales from '@/components/admin/TodaySales.jsx'
 import PerfumeSalesSection from '@/components/admin/PerfumeSalesSection.jsx'
+import SublimationSalesSection from '@/components/admin/SublimationSalesSection.jsx'
 import CategoriesSection from '@/components/admin/CategoriesSection.jsx'
 import TopProductsTable from '@/components/admin/TopProductsTable.jsx'
 import PerfumesInventory from '@/components/admin/PerfumesInventory.jsx'
+import SublimationInventory from '@/components/admin/SublimationInventory.jsx'
 import MetricsTable from '@/components/admin/MetricsTable.jsx'
 import LocationBreakdownTable from '@/components/admin/LocationBreakdownTable.jsx'
 import SalesInsightsPies from '@/components/admin/SalesInsightsPies.jsx'
 import CustomerCampaignsTab from '@/components/admin/CustomerCampaignsTab.jsx'
 import Button from '@/components/Button.jsx'
+import { isSublimationCategory } from '@/utils/productMeta'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -44,8 +47,10 @@ export default function AdminDashboard() {
   })
   const [categoryData, setCategoryData] = useState([])
   const [perfumeProducts, setPerfumeProducts] = useState([])
+  const [sublimationProducts, setSublimationProducts] = useState([])
   const [topProducts, setTopProducts] = useState([])
   const [allPerfumes, setAllPerfumes] = useState([])
+  const [allSublimationProducts, setAllSublimationProducts] = useState([])
   const [locationBreakdown, setLocationBreakdown] = useState([])
   const [announcementTitle, setAnnouncementTitle] = useState('')
   const [announcementMessage, setAnnouncementMessage] = useState('')
@@ -77,7 +82,7 @@ export default function AdminDashboard() {
       const { startDate, endDate } = getDateRange(dateRange)
       const params = new URLSearchParams({ startDate, endDate })
 
-      const [summaryRes, categoryRes, perfumeRes, topRes, locationRes] = await Promise.all([
+      const [summaryRes, categoryRes, perfumeRes, sublimationRes, topRes, locationRes] = await Promise.all([
         fetch(`${API}/api/analytics/dashboard-summary?${params}`, {
           headers: { Authorization: `Bearer ${token}` },
           signal
@@ -87,6 +92,10 @@ export default function AdminDashboard() {
           signal
         }),
         fetch(`${API}/api/analytics/perfume-sales?${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal
+        }),
+        fetch(`${API}/api/analytics/sublimation-sales?${params}`, {
           headers: { Authorization: `Bearer ${token}` },
           signal
         }),
@@ -108,6 +117,7 @@ export default function AdminDashboard() {
       const summaryData = await summaryRes.json()
       const categoryList = categoryRes.ok ? await categoryRes.json() : []
       const perfumeList = perfumeRes.ok ? await perfumeRes.json() : []
+      const sublimationList = sublimationRes.ok ? await sublimationRes.json() : []
       const topList = topRes.ok ? await topRes.json() : []
       const locationList = locationRes.ok ? await locationRes.json() : []
 
@@ -120,6 +130,7 @@ export default function AdminDashboard() {
       })
       setCategoryData(categoryList)
       setPerfumeProducts(perfumeList)
+      setSublimationProducts(sublimationList)
       setTopProducts(topList)
       setLocationBreakdown(locationList)
     } catch (error) {
@@ -162,6 +173,37 @@ export default function AdminDashboard() {
     } catch (error) {
       if (isAbortError(error)) return
       console.error('Error loading all perfumes:', error)
+    }
+  }
+
+  const loadAllSublimationProducts = async (signal) => {
+    try {
+      const [sublimationRes, sublimacionRes] = await Promise.all([
+        fetch(`${API}/api/products?q=sublimation&limit=1000`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal
+        }),
+        fetch(`${API}/api/products?q=sublimacion&limit=1000`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal
+        })
+      ])
+
+      const datasets = []
+      if (sublimationRes.ok) datasets.push(await sublimationRes.json())
+      if (sublimacionRes.ok) datasets.push(await sublimacionRes.json())
+
+      if (datasets.length > 0) {
+        const combined = datasets.flatMap((dataset) => dataset.rows || [])
+        const byId = new Map(combined.map((product) => [product.id, product]))
+        const sublimationOnly = Array.from(byId.values()).filter((product) => (
+          isSublimationCategory(product.category)
+        ))
+        setAllSublimationProducts(sublimationOnly)
+      }
+    } catch (error) {
+      if (isAbortError(error)) return
+      console.error('Error loading all sublimation products:', error)
     }
   }
 
@@ -225,6 +267,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!token) return
     const controller = new AbortController()
+    loadAllSublimationProducts(controller.signal)
+    return () => controller.abort()
+  }, [token])
+
+  useEffect(() => {
+    if (!token) return
+    const controller = new AbortController()
     loadTodaySales(controller.signal)
     return () => controller.abort()
   }, [token])
@@ -250,6 +299,14 @@ export default function AdminDashboard() {
     setAllPerfumes((current) =>
       current.map((perfume) => (
         perfume.id === updatedPerfume.id ? updatedPerfume : perfume
+      ))
+    )
+  }
+
+  const handleSublimationProductUpdated = (updatedProduct) => {
+    setAllSublimationProducts((current) =>
+      current.map((product) => (
+        product.id === updatedProduct.id ? updatedProduct : product
       ))
     )
   }
@@ -358,6 +415,16 @@ export default function AdminDashboard() {
               }`}
             >
               Top productos
+            </button>
+            <button
+              onClick={() => setActiveTab('sublimacion')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === 'sublimacion'
+                  ? 'bg-blue-700 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Sublimacion
             </button>
             <button
               onClick={() => setActiveTab('mensaje')}
@@ -478,6 +545,19 @@ export default function AdminDashboard() {
 
             {activeTab === 'top' && (
               <TopProductsTable topProducts={topProducts} />
+            )}
+
+            {activeTab === 'sublimacion' && (
+              <div className="space-y-6">
+                <div>
+                  <SublimationSalesSection sublimationProducts={sublimationProducts} />
+                </div>
+                <SublimationInventory
+                  allSublimationProducts={allSublimationProducts}
+                  token={token}
+                  onProductUpdated={handleSublimationProductUpdated}
+                />
+              </div>
             )}
 
             {activeTab === 'mensaje' && (

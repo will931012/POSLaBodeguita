@@ -1,4 +1,5 @@
 const AUTO_UPC_START = 1200000001n
+const AUTO_UPC_END = 1299999999n
 const AUTO_UPC_LOCK_KEY = 1200000001
 const POSTGRES_BIGINT_MAX = '9223372036854775807'
 
@@ -18,6 +19,7 @@ const generateNextUpc = async (client) => {
        SELECT CASE
          WHEN upc IS NOT NULL
            AND upc ~ '^[0-9]+$'
+           AND LENGTH(upc) = 10
            AND (
              LENGTH(upc) < 19
              OR (LENGTH(upc) = 19 AND upc <= $1)
@@ -27,12 +29,18 @@ const generateNextUpc = async (client) => {
        END AS candidate_upc
        FROM products
      ) upc_candidates
-     WHERE candidate_upc >= $2`,
-    [POSTGRES_BIGINT_MAX, AUTO_UPC_START.toString()]
+     WHERE candidate_upc BETWEEN $2 AND $3`,
+    [POSTGRES_BIGINT_MAX, AUTO_UPC_START.toString(), AUTO_UPC_END.toString()]
   )
 
   const currentMax = rows[0]?.max_upc ? BigInt(rows[0].max_upc) : AUTO_UPC_START - 1n
-  return (currentMax + 1n).toString()
+  const nextUpc = currentMax + 1n
+
+  if (nextUpc > AUTO_UPC_END) {
+    throw new Error('No quedan UPC autogenerados disponibles de 10 digitos')
+  }
+
+  return nextUpc.toString()
 }
 
 const resolveProductUpc = async (client, providedUpc) => {
@@ -43,6 +51,7 @@ const resolveProductUpc = async (client, providedUpc) => {
 }
 
 module.exports = {
+  AUTO_UPC_END,
   AUTO_UPC_START,
   resolveProductUpc,
 }
