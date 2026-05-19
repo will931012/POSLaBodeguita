@@ -178,29 +178,32 @@ export default function AdminDashboard() {
 
   const loadAllSublimationProducts = async (signal) => {
     try {
-      const [sublimationRes, sublimacionRes] = await Promise.all([
-        fetch(`${API}/api/products?q=sublimation&limit=1000`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        }),
-        fetch(`${API}/api/products?q=sublimacion&limit=1000`, {
+      const pageSize = 1000
+      let offset = 0
+      let hasMore = true
+      const allProducts = []
+
+      while (hasMore) {
+        const response = await fetch(`${API}/api/products?limit=${pageSize}&offset=${offset}`, {
           headers: { Authorization: `Bearer ${token}` },
           signal
         })
-      ])
 
-      const datasets = []
-      if (sublimationRes.ok) datasets.push(await sublimationRes.json())
-      if (sublimacionRes.ok) datasets.push(await sublimacionRes.json())
+        if (!response.ok) {
+          throw new Error('No se pudo cargar el inventario de sublimacion')
+        }
 
-      if (datasets.length > 0) {
-        const combined = datasets.flatMap((dataset) => dataset.rows || [])
-        const byId = new Map(combined.map((product) => [product.id, product]))
-        const sublimationOnly = Array.from(byId.values()).filter((product) => (
-          isSublimationCategory(product.category)
-        ))
-        setAllSublimationProducts(sublimationOnly)
+        const data = await response.json()
+        const pageRows = data.rows || []
+
+        allProducts.push(...pageRows)
+
+        hasMore = pageRows.length === pageSize
+        offset += pageSize
       }
+
+      const sublimationOnly = allProducts.filter((product) => isSublimationCategory(product.category))
+      setAllSublimationProducts(sublimationOnly)
     } catch (error) {
       if (isAbortError(error)) return
       console.error('Error loading all sublimation products:', error)
