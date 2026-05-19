@@ -90,5 +90,5 @@ export function buildBarcodeSvg(value) {
 
   const totalWidth = cursorX + QUIET_ZONE
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${BARCODE_HEIGHT}" role="img" aria-label="Barcode for ${normalizedValue}" preserveAspectRatio="none"><rect width="${totalWidth}" height="${BARCODE_HEIGHT}" fill="#ffffff" />${barsMarkup}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${BARCODE_HEIGHT}" width="100%" height="100%" role="img" aria-label="Barcode for ${normalizedValue}" preserveAspectRatio="none" style="display:block"><rect width="${totalWidth}" height="${BARCODE_HEIGHT}" fill="#ffffff" />${barsMarkup}</svg>`
 }

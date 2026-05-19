@@ -80,12 +80,12 @@ export default function ProductLabel() {
             <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 print:mt-6 print:rounded-none print:border-0 print:bg-white print:p-0">
               {upc ? (
                 barcodeSupported && barcodeSvg ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4 print:space-y-3">
                     <div
-                      className="mx-auto h-32 w-full max-w-xl bg-white p-3 print:h-28 print:max-w-none print:p-0"
+                      className="mx-auto h-32 w-full max-w-xl bg-white p-3 print:h-32 print:max-w-none print:px-0 print:pt-0 print:pb-2"
                       dangerouslySetInnerHTML={{ __html: barcodeSvg }}
                     />
-                    <p className="text-center font-mono text-2xl tracking-[0.28em] text-slate-900">
+                    <p className="text-center font-mono text-2xl tracking-[0.28em] text-slate-900 print:text-xl">
                       {upc}
                     </p>
                   </div>
