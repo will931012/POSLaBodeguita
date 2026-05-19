@@ -8,7 +8,6 @@ export const PERFUME_CONDITION_OPTIONS = [
   'Refill',
 ]
 
-const SUBLIMATION_KEYWORDS = ['sublimation', 'sublimacion']
 const SUBLIMATION_CATEGORY_NAMES = ['sublimation products', 'sublimation product']
 
 function normalizeCategoryValue(category) {
@@ -26,7 +25,6 @@ export function isPerfumeCategory(category) {
 export function isSublimationCategory(category) {
   const normalized = normalizeCategoryValue(category)
   return SUBLIMATION_CATEGORY_NAMES.includes(normalized)
-    || SUBLIMATION_KEYWORDS.some((keyword) => normalized.includes(keyword))
 }
 
 export function buildPerfumeDetails(product) {

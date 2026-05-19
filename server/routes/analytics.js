@@ -3,7 +3,7 @@ const { query } = require('../config/database')
 
 const router = express.Router()
 const PERFUME_CATEGORY_MATCH = `(p.category ILIKE '%perfume%' OR p.category ILIKE '%fragancia%')`
-const SUBLIMATION_CATEGORY_MATCH = `(p.category ILIKE '%sublimation%' OR p.category ILIKE '%sublimacion%')`
+const SUBLIMATION_CATEGORY_MATCH = `(LOWER(TRIM(p.category)) IN ('sublimation product', 'sublimation products'))`
 
 // Middleware to check if user is admin
 const requireAdmin = (req, res, next) => {
